@@ -1,0 +1,28 @@
+Field	Type	Description
+id	ObjectId	Trade ID 
+userid	ObjectId	Reference to [User]
+symbol	String	Trading symbol (1-50 chars)
+transactionDate	Date	Optional. Trade transaction date
+Side	String	Optional. Buy/sell side of the trade
+orderID	String	Optional. Broker Order ID of the trade
+positionEffect	String	Optional. Opening/closing of the trade
+entryCriteria	String	Optional. Entry criteria details (max 1000 chars)
+exitCriteria	String	Optional. Exit criteria details (max 1000 chars)
+orderPrice	Number	Optional. price of the trade
+EntryPrice	Number	Optional. trade price if the positionEffect is “Opening” Entry price of trade
+exitPrice	Number	Optional. trade price if the positionEffect is “Closing” Entry price of trade
+stopLoss	Number	Optional. Stop loss price
+takeProfit	Number	Optional. Take profit price
+positionSize	Number	Optional. Size of trading position
+confidencebeforeTrade	Number	Optional. Confidence level before trade
+confidenceafterTrade	Number	Optional. Confidence level after trade
+disciplineGrade	Number	Optional. Trading discipline grade (1-5)
+wentWell	String	Optional. What went well (max 1000 chars)
+wentWrong	String	Optional. What went wrong (max 1000 chars)
+lessonsLearned	String	Optional. Lessons learned (max 1000 chars)
+marketConditions	String	Optional. Market conditions (max 50 chars)
+notes	String	Optional. Additional notes (max 2000 chars)
+rulesFollowed	Boolean	Optional. Trade followed user’s rule or not
+risk	Number	Optional. Trading risk grade (1-5)
+imageUrl	String	Optional. URL to trade image (max 1000 chars)
+lastUpdated	Date	date when this question is updated last time

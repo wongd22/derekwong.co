@@ -1,0 +1,163 @@
+{
+  "rules": {
+    "shopping_list": {
+      ".read": true,
+      ".write": true,
+      "$item_id": {
+        ".validate": "newData.hasChildren(['name'])",
+        "name": {
+          ".validate": "newData.isString() && 
+                       newData.val().length > 0 && 
+                       newData.val().length <= 100"
+        },
+        "createdAt": {
+          ".validate": "newData.isString()"
+        },
+        "location": {
+          ".validate": "!newData.exists() || 
+                       (newData.isString() && 
+                        newData.val().length <= 200)"
+        },
+        "imageUrl": {
+          ".validate": "!newData.exists() || 
+                       (newData.isString() && 
+                        newData.val().length <= 1000)"
+        },
+        "url": {
+          ".validate": "!newData.exists() || 
+                       (newData.isString() && 
+                        newData.val().length <= 1000)"
+        },
+        "remarks": {
+          ".validate": "!newData.exists() || 
+                       (newData.isString() && 
+                        newData.val().length <= 1000)"
+        },
+        "tags": {
+          ".validate": "!newData.exists() || newData.val() == null || true"
+        },
+        "isBought": {
+          ".validate": "!newData.exists() || newData.isBoolean()"
+        }
+      }
+    },
+    "trades": {
+      "$userId": {
+        ".read": "auth != null && auth.uid === $userId",
+        ".write": "auth != null && auth.uid === $userId",
+        "$tradeId": {
+          ".validate": "newData.hasChildren(['userId', 'symbol', 'lastUpdated'])",
+          "userId": {
+            ".validate": "newData.val() === auth.uid"
+          },
+          "symbol": {
+            ".validate": "newData.isString() && 
+                         newData.val().length > 0 && 
+                         newData.val().length <= 50"
+          },
+          "transactionDate": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "side": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val() === 'BUY' || newData.val() === 'SELL')"
+          },
+          "orderId": {
+            ".validate": "!newData.exists() || newData.isString()"
+          },
+          "positionEffect": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val() === 'OPENING' || newData.val() === 'CLOSING')"
+          },
+          "entryCriteria": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "exitCriteria": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "orderPrice": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "entryPrice": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "exitPrice": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "stopLoss": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "takeProfit": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "positionSize": {
+            ".validate": "!newData.exists() || newData.isNumber()"
+          },
+          "confidenceBeforeTrade": {
+            ".validate": "!newData.exists() || 
+                         (newData.isNumber() && 
+                          newData.val() >= 1 && 
+                          newData.val() <= 5)"
+          },
+          "confidenceAfterTrade": {
+            ".validate": "!newData.exists() || 
+                         (newData.isNumber() && 
+                          newData.val() >= 1 && 
+                          newData.val() <= 5)"
+          },
+          "wentWell": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "wentWrong": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "lessonsLearned": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "marketConditions": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 50)"
+          },
+          "notes": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 2000)"
+          },
+          "rulesFollowed": {
+            ".validate": "!newData.exists() || newData.isBoolean()"
+          },
+          "risk": {
+            ".validate": "!newData.exists() || 
+                         (newData.isNumber() && 
+                          newData.val() >= 1 && 
+                          newData.val() <= 5)"
+          },
+          "imageUrl": {
+            ".validate": "!newData.exists() || 
+                         (newData.isString() && 
+                          newData.val().length <= 1000)"
+          },
+          "lastUpdated": {
+            ".validate": "newData.isString()"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    }
+  }
+}

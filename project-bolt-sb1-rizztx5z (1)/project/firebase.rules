@@ -1,0 +1,19 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /shopping_images/{itemId}/{fileName} {
+      // Allow read access to all users
+      allow read: if true;
+      
+      // Allow write (create/update) if:
+      // 1. File is an image
+      // 2. File size is less than 5MB
+      allow write: if request.resource.contentType.matches('image/.*')
+                  && request.resource.size < 5 * 1024 * 1024;
+      
+      // Allow delete if the file exists
+      allow delete: if resource != null;
+    }
+  }
+}
