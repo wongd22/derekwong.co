@@ -1,0 +1,6 @@
+{
+    "rewrites": [
+      { "source": "/shopping", "destination": "/index.html" }
+    ]
+  }
+  
