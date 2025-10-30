@@ -21,7 +21,7 @@ const Hero = () => {
         
         <div className="mt-12 flex flex-wrap justify-center gap-4" >
           <a
-            href="https://docs.google.com/forms/d/e/1FAIpQLScNT8j00PmJn32MWjYO6AL-d0JCjvPQRhNQds9q9MqLrl-d3g/viewform?usp=sf_link"
+            href="https://lookerstudio.google.com/s/lPZJlenfGRI"
             target="_blank"
             rel="noopener noreferrer"
             className="px-6 py-3 rounded-full border border-white/20 hover:bg-white/10 transition-all duration-300"
