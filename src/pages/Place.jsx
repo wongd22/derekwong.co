@@ -4,13 +4,24 @@ import { PlusCircle, MinusCircle, Undo, RotateCcw } from 'lucide-react';
 const GAME_STATE_KEY = 'playerCalculatorGame';
 
 const PlayerCalculator = () => {
-    // Initialize state from localStorage or use defaults
     const [players, setPlayers] = useState(() => {
         try {
             const saved = localStorage.getItem(GAME_STATE_KEY);
-            return saved ? JSON.parse(saved).players : ['A', 'B', 'C', 'D'];
+            if (!saved) return [
+                { id: 'A', name: 'Player A' },
+                { id: 'B', name: 'Player B' },
+            ];
+            
+            const data = JSON.parse(saved);
+            if (typeof data.players[0] === 'string') {
+                return data.players.map(p => ({ id: p, name: `Player ${p}` }));
+            }
+            return data.players;
         } catch {
-            return ['A', 'B', 'C', 'D'];
+            return [
+                { id: 'A', name: 'Player A' },
+                { id: 'B', name: 'Player B' },
+            ];
         }
     });
 
@@ -24,32 +35,27 @@ const PlayerCalculator = () => {
     });
 
     const [currentScores, setCurrentScores] = useState(() => {
-        try {
-            const saved = localStorage.getItem(GAME_STATE_KEY);
-            const initialPlayers = saved ? JSON.parse(saved).players : ['A', 'B', 'C', 'D'];
-            return initialPlayers.reduce((acc, player) => ({ ...acc, [player]: '' }), {});
-        } catch {
-            return { A: '', B: '', C: '', D: '' };
-        }
+        const initialPlayerIds = players.map(p => p.id);
+        return initialPlayerIds.reduce((acc, playerId) => ({ ...acc, [playerId]: '' }), {});
     });
 
-    // Effect to save game state to localStorage whenever players or rounds change
     useEffect(() => {
         const gameState = { players, rounds };
         localStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
     }, [players, rounds]);
 
-    // Function to start a new game
     const startNewGame = () => {
         if (window.confirm("Are you sure you want to start a new game? This will erase your saved game.")) {
-            const initialPlayers = ['A', 'B', 'C', 'D'];
+            const initialPlayers = [
+                { id: 'A', name: 'Player A' },
+                { id: 'B', name: 'Player B' },
+            ];
             setPlayers(initialPlayers);
             setRounds([]);
-            setCurrentScores(initialPlayers.reduce((acc, player) => ({ ...acc, [player]: '' }), {}));
+            setCurrentScores(initialPlayers.reduce((acc, player) => ({ ...acc, [player.id]: '' }), {}));
         }
     };
 
-    // Function to undo the last submitted round
     const undoLastRound = () => {
         if (rounds.length > 0) {
             if (window.confirm("Are you sure you want to undo the last round?")) {
@@ -60,88 +66,78 @@ const PlayerCalculator = () => {
         }
     };
 
+    const handlePlayerNameChange = (playerId, newName) => {
+        setPlayers(prevPlayers =>
+            prevPlayers.map(p =>
+                p.id === playerId ? { ...p, name: newName } : p
+            )
+        );
+    };
+    
     const addPlayer = () => {
         const availableLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-        const usedLetters = new Set(players);
-        const nextLetter = Array.from(availableLetters).find(letter => !usedLetters.has(letter));
+        const usedIds = new Set(players.map(p => p.id));
+        const nextId = Array.from(availableLetters).find(id => !usedIds.has(id));
         
-        if (nextLetter) {
-            setPlayers([...players, nextLetter]);
-            setCurrentScores(prev => ({
-                ...prev,
-                [nextLetter]: ''
-            }));
+        if (nextId) {
+            setPlayers([...players, { id: nextId, name: `Player ${nextId}` }]);
+            setCurrentScores(prev => ({ ...prev, [nextId]: '' }));
         }
     };
 
-    const removePlayer = (playerToRemove) => {
+    const removePlayer = (playerIdToRemove) => {
         if (players.length <= 2) {
             alert('Minimum 2 players required');
             return;
         }
-
-        setPlayers(players.filter(player => player !== playerToRemove));
-        setCurrentScores(prev => {
-            const newScores = { ...prev };
-            delete newScores[playerToRemove];
-            return newScores;
-        });
+        setPlayers(players.filter(player => player.id !== playerIdToRemove));
+        const newScores = { ...currentScores };
+        delete newScores[playerIdToRemove];
+        setCurrentScores(newScores);
     };
 
     const calculateRoundDifferences = (scores) => {
         const results = {};
+        const playerIds = players.map(p => p.id);
         
-        players.forEach(player => {
+        playerIds.forEach(playerId => {
             let sum = 0;
-            players.forEach(otherPlayer => {
-                if (player !== otherPlayer) {
-                    sum += (scores[player] - scores[otherPlayer]) * -1;
+            playerIds.forEach(otherPlayerId => {
+                if (playerId !== otherPlayerId) {
+                    sum += (scores[playerId] - scores[otherPlayerId]) * -1;
                 }
             });
-            results[player] = sum;
+            results[playerId] = sum;
         });
-        
         return results;
     };
 
     const calculateCumulativeResults = () => {
-        const cumulative = players.reduce((acc, player) => {
-            acc[player] = 0;
-            return acc;
-        }, {});
-
+        const cumulative = players.reduce((acc, player) => ({ ...acc, [player.id]: 0 }), {});
         rounds.forEach(round => {
-            Object.keys(round.differences).forEach(player => {
-                if (cumulative.hasOwnProperty(player)) {
-                    cumulative[player] += round.differences[player];
+            for (const playerId in round.differences) {
+                if (cumulative.hasOwnProperty(playerId)) {
+                    cumulative[playerId] += round.differences[playerId];
                 }
-            });
+            }
         });
         return cumulative;
     };
 
-    const handleInputChange = (player, value) => {
-        setCurrentScores(prev => ({
-            ...prev,
-            [player]: value
-        }));
+    const handleInputChange = (playerId, value) => {
+        setCurrentScores(prev => ({ ...prev, [playerId]: value }));
     };
 
     const handleSubmitRound = () => {
-        if (Object.entries(currentScores)
-            .filter(([player]) => players.includes(player))
-            .some(([_, score]) => score === '' || isNaN(score))) {
-            alert('Please enter valid numbers for all players');
+        const playerIds = players.map(p => p.id);
+        const scoresToValidate = playerIds.reduce((acc, id) => ({...acc, [id]: currentScores[id]}), {});
+
+        if (Object.values(scoresToValidate).some(score => score === '' || isNaN(score))) {
+            alert('Please enter valid numbers for all players.');
             return;
         }
 
-        const numericScores = Object.entries(currentScores)
-            .filter(([player]) => players.includes(player))
-            .reduce((acc, [player, score]) => {
-                acc[player] = Number(score);
-                return acc;
-            }, {});
-
+        const numericScores = playerIds.reduce((acc, id) => ({...acc, [id]: Number(currentScores[id])}), {});
         const roundDifferences = calculateRoundDifferences(numericScores);
         
         setRounds(prev => [...prev, {
@@ -150,164 +146,134 @@ const PlayerCalculator = () => {
             differences: roundDifferences
         }]);
 
-        const resetScores = players.reduce((acc, player) => {
-            acc[player] = '';
-            return acc;
-        }, {});
-        setCurrentScores(resetScores);
+        setCurrentScores(playerIds.reduce((acc, id) => ({ ...acc, [id]: '' }), {}));
     };
 
     const cumulativeResults = calculateCumulativeResults();
 
     return (
-        <div className="min-h-screen bg-gray-900 p-8">
-            <div className="max-w-6xl mx-auto space-y-8">
-                <div className="flex justify-between items-center">
-                    <h1 className="text-4xl font-bold text-white text-center mb-12">Place Calculator</h1>
-                    <div className="flex gap-4">
+        <div className="min-h-screen font-sans bg-gradient-to-br from-blue-300 via-purple-400 to-pink-400 p-4 sm:p-6 md:p-8 text-slate-800">
+            <div className="max-w-7xl mx-auto space-y-8">
+                <header className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
+                    <h1 className="text-4xl md:text-5xl font-bold text-white text-center drop-shadow-lg">Place Calculator</h1>
+                    <div className="flex gap-3">
                         <button
                             onClick={startNewGame}
-                            className="p-2 text-yellow-400 hover:text-yellow-300 transition-colors flex items-center gap-2"
+                            className="bg-white/30 backdrop-blur-lg rounded-lg p-2 pr-3 text-slate-700 hover:bg-white/40 transition-all border border-white/50 flex items-center gap-2 shadow-md"
                             title="New Game"
                         >
-                            <RotateCcw size={24} />
-                            <span>New Game</span>
+                            <RotateCcw size={20} />
+                            <span className="font-medium text-sm">New Game</span>
                         </button>
                         <button
                             onClick={undoLastRound}
-                            className="p-2 text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
+                            className="bg-white/30 backdrop-blur-lg rounded-lg p-2 pr-3 text-slate-700 hover:bg-white/40 transition-all border border-white/50 flex items-center gap-2 shadow-md"
                             title="Undo Last Round"
                         >
-                            <Undo size={24} />
-                            <span>Undo</span>
+                            <Undo size={20} />
+                            <span className="font-medium text-sm">Undo</span>
                         </button>
                     </div>
-                </div>
+                </header>
 
-                <div className="grid md:grid-cols-2 gap-6">
-                    {/* Input Panel */}
-                    <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-                        <div className="flex justify-between items-center mb-6">
-                            <h2 className="text-xl font-bold text-white">Input Round Scores</h2>
+                <main className="grid grid-cols-1 lg:grid-cols-5 gap-8">
+                    {/* Input & Results Panel */}
+                    <div className="lg:col-span-2 space-y-8">
+                        {/* Input Card */}
+                        <div className="bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
+                            <div className="flex justify-between items-center mb-6">
+                                <h2 className="text-2xl font-bold text-slate-800">Input Scores</h2>
+                                <button onClick={addPlayer} className="text-blue-600 hover:text-blue-500 transition-colors" title="Add Player">
+                                    <PlusCircle size={28} />
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-5">
+                                {players.map(player => (
+                                    <div key={player.id} className="space-y-2">
+                                        <input
+                                            type="text"
+                                            value={player.name}
+                                            onChange={(e) => handlePlayerNameChange(player.id, e.target.value)}
+                                            className="w-full bg-black/10 border-transparent rounded-md px-3 py-1 text-sm font-semibold text-slate-700 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-black/5"
+                                        />
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="number"
+                                                value={currentScores[player.id]}
+                                                onChange={(e) => handleInputChange(player.id, e.target.value)}
+                                                placeholder="Score"
+                                                className="w-full bg-black/10 border-transparent rounded-md pl-3 pr-1 py-2 text-slate-800 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-black/5"
+                                            />
+                                            <button onClick={() => removePlayer(player.id)} className="text-red-500 hover:text-red-400 transition-colors" title="Remove Player">
+                                                <MinusCircle size={24} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                             <button
-                                onClick={addPlayer}
-                                className="p-2 text-emerald-400 hover:text-emerald-300 transition-colors"
-                                title="Add Player"
+                                onClick={handleSubmitRound}
+                                className="mt-8 w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
                             >
-                                <PlusCircle size={24} />
+                                Submit Round
                             </button>
                         </div>
-                        <div className="grid grid-cols-2 gap-4">
-                            {players.map(player => (
-                                <div key={player} className="relative">
-                                    <label className="block text-sm font-medium text-gray-300 mb-2">
-                                        Player {player}
-                                    </label>
-                                    <div className="flex gap-2">
-                                        <input
-                                            type="number"
-                                            value={currentScores[player]}
-                                            onChange={(e) => handleInputChange(player, e.target.value)}
-                                            className="block w-full bg-gray-700 border-gray-600 rounded-lg px-4 py-2 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        />
-                                        <button
-                                            onClick={() => removePlayer(player)}
-                                            className="text-red-400 hover:text-red-300 transition-colors"
-                                            title="Remove Player"
-                                        >
-                                            <MinusCircle size={24} />
-                                        </button>
+                        
+                        {/* Cumulative Results Card */}
+                        <div className="bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
+                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Cumulative Results</h2>
+                            <div className="space-y-3">
+                                {players.map(player => (
+                                    <div key={player.id} className="flex justify-between items-center p-3 bg-black/10 rounded-lg">
+                                        <span className="font-bold text-slate-700">{player.name}</span>
+                                        <span className={`font-bold text-lg ${
+                                            cumulativeResults[player.id] > 0 ? 'text-green-600' : 
+                                            cumulativeResults[player.id] < 0 ? 'text-red-600' : 'text-slate-600'
+                                        }`}>
+                                            {cumulativeResults[player.id] > 0 ? '+' : ''}{cumulativeResults[player.id] ?? 0}
+                                        </span>
                                     </div>
-                                </div>
-                            ))}
-                        </div>
-                        <button
-                            onClick={handleSubmitRound}
-                            className="mt-6 w-full bg-blue-600 hover:bg-blue-500 text-white py-3 px-4 rounded-lg font-medium transition-colors"
-                        >
-                            Submit Round
-                        </button>
-                    </div>
-
-                    {/* Results Panel */}
-                    <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
-                        <h2 className="text-xl font-bold text-white mb-6">Cumulative Results</h2>
-                        <div className="space-y-3">
-                            {Object.entries(cumulativeResults).map(([player, score]) => (
-                                <div key={player} className="flex justify-between items-center p-3 bg-gray-700 rounded-lg">
-                                    <span className="font-medium text-gray-200">Player {player}</span>
-                                    <span className={`font-bold ${
-                                        score > 0 ? 'text-emerald-400' : 
-                                        score < 0 ? 'text-red-400' : 
-                                        'text-gray-400'
-                                    }`}>
-                                        {score > 0 ? '+' : ''}{score}
-                                    </span>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                {/* Rounds History */}
-                <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700 overflow-x-auto">
-                    <h2 className="text-xl font-bold text-white mb-6">Rounds History</h2>
-                    <table className="w-full">
-                        <thead>
-                            <tr className="border-b border-gray-700">
-                                <th className="px-4 py-3 text-left text-gray-300">Round</th>
-                                <th className="px-4 py-3 text-left text-gray-300" colSpan={players.length}>Scores</th>
-                                <th className="px-4 py-3 text-left text-gray-300" colSpan={players.length}>Round +/-</th>
-                            </tr>
-                            <tr className="border-b border-gray-700">
-                                <th className="px-4 py-3 text-gray-300"></th>
-                                {players.map(player => (
-                                    <th key={`score-${player}`} className="px-4 py-3 text-gray-300">
-                                        Player {player}
-                                    </th>
-                                ))}
-                                {players.map(player => (
-                                    <th key={`diff-${player}`} className="px-4 py-3 text-gray-300">
-                                        Player {player}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rounds.map((round) => (
-                                <tr key={round.roundNumber} className="border-b border-gray-700">
-                                    <td className="px-4 py-3 text-gray-300">
-                                        {round.roundNumber}
-                                    </td>
-                                    {players.map(player => (
-                                        <td key={`score-${player}`} className="px-4 py-3 text-gray-300">
-                                            {round.scores[player] ?? '-'}
-                                        </td>
+                    {/* Rounds History Panel */}
+                    <div className="lg:col-span-3 bg-white/30 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6 overflow-hidden">
+                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Rounds History</h2>
+                        <div className="overflow-x-auto">
+                            <table className="w-full min-w-[600px] text-sm text-left">
+                                <thead className="text-slate-600">
+                                    <tr className="border-b border-white/40">
+                                        <th className="px-3 py-3 font-semibold">#</th>
+                                        {players.map(player => <th key={player.id} className="px-3 py-3 font-semibold">{player.name}</th>)}
+                                        {players.map(player => <th key={`${player.id}-diff`} className="px-3 py-3 font-semibold text-center">{player.name} +/-</th>)}
+                                    </tr>
+                                </thead>
+                                <tbody className="text-slate-700">
+                                    {rounds.slice().reverse().map((round) => (
+                                        <tr key={round.roundNumber} className="border-b border-white/20 hover:bg-black/5">
+                                            <td className="px-3 py-3 font-bold">{round.roundNumber}</td>
+                                            {players.map(player => (
+                                                <td key={`${round.roundNumber}-${player.id}-score`} className="px-3 py-3">{round.scores[player.id] ?? '–'}</td>
+                                            ))}
+                                            {players.map(player => (
+                                                <td key={`${round.roundNumber}-${player.id}-diff`} className={`px-3 py-3 font-bold text-center ${
+                                                    round.differences[player.id] > 0 ? 'text-green-600' : 
+                                                    round.differences[player.id] < 0 ? 'text-red-600' : 'text-slate-500'
+                                                }`}>
+                                                    {round.differences[player.id] != null ? 
+                                                        `${round.differences[player.id] > 0 ? '+' : ''}${round.differences[player.id]}` : '–'
+                                                    }
+                                                </td>
+                                            ))}
+                                        </tr>
                                     ))}
-                                    {players.map(player => (
-                                        <td 
-                                            key={`diff-${player}`} 
-                                            className={`px-4 py-3 ${
-                                                round.differences[player] > 0 
-                                                    ? 'text-emerald-400' 
-                                                    : round.differences[player] < 0 
-                                                        ? 'text-red-400' 
-                                                        : 'text-gray-300'
-                                            }`}
-                                        >
-                                            {round.differences[player] != null ? (
-                                                <>
-                                                    {round.differences[player] > 0 ? '+' : ''}
-                                                    {round.differences[player]}
-                                                </>
-                                            ) : '-'}
-                                        </td>
-                                    ))}
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </main>
             </div>
         </div>
     );
