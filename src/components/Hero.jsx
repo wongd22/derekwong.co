@@ -28,14 +28,6 @@ const Hero = () => {
           >
             💰
           </a>
-          <a
-            href="https://docs.google.com/forms/d/e/1FAIpQLSfQXJuBOakxD4jZPOlROeHDBE2Qi8kvwT_mbplfjHhjjJDeoA/viewform?usp=sf_link"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="px-6 py-3 rounded-full border border-white/20 hover:bg-white/10 transition-all duration-300"
-          >
-            🏠
-          </a>
           
            <a
             href="https://ship.spaceshipapp.com/orders/unfulfilled"
