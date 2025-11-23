@@ -1,12 +1,64 @@
-import React, { useState } from 'react';
-import { PlusCircle, MinusCircle } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PlusCircle, MinusCircle, Undo, RotateCcw } from 'lucide-react';
+
+const GAME_STATE_KEY = 'playerCalculatorGame';
 
 const PlayerCalculator = () => {
-    const [players, setPlayers] = useState(['A', 'B', 'C', 'D']);
-    const [rounds, setRounds] = useState([]);
-    const [currentScores, setCurrentScores] = useState({
-        A: '', B: '', C: '', D: ''
+    // Initialize state from localStorage or use defaults
+    const [players, setPlayers] = useState(() => {
+        try {
+            const saved = localStorage.getItem(GAME_STATE_KEY);
+            return saved ? JSON.parse(saved).players : ['A', 'B', 'C', 'D'];
+        } catch {
+            return ['A', 'B', 'C', 'D'];
+        }
     });
+
+    const [rounds, setRounds] = useState(() => {
+        try {
+            const saved = localStorage.getItem(GAME_STATE_KEY);
+            return saved ? JSON.parse(saved).rounds : [];
+        } catch {
+            return [];
+        }
+    });
+
+    const [currentScores, setCurrentScores] = useState(() => {
+        try {
+            const saved = localStorage.getItem(GAME_STATE_KEY);
+            const initialPlayers = saved ? JSON.parse(saved).players : ['A', 'B', 'C', 'D'];
+            return initialPlayers.reduce((acc, player) => ({ ...acc, [player]: '' }), {});
+        } catch {
+            return { A: '', B: '', C: '', D: '' };
+        }
+    });
+
+    // Effect to save game state to localStorage whenever players or rounds change
+    useEffect(() => {
+        const gameState = { players, rounds };
+        localStorage.setItem(GAME_STATE_KEY, JSON.stringify(gameState));
+    }, [players, rounds]);
+
+    // Function to start a new game
+    const startNewGame = () => {
+        if (window.confirm("Are you sure you want to start a new game? This will erase your saved game.")) {
+            const initialPlayers = ['A', 'B', 'C', 'D'];
+            setPlayers(initialPlayers);
+            setRounds([]);
+            setCurrentScores(initialPlayers.reduce((acc, player) => ({ ...acc, [player]: '' }), {}));
+        }
+    };
+
+    // Function to undo the last submitted round
+    const undoLastRound = () => {
+        if (rounds.length > 0) {
+            if (window.confirm("Are you sure you want to undo the last round?")) {
+                setRounds(prev => prev.slice(0, -1));
+            }
+        } else {
+            alert("No rounds to undo.");
+        }
+    };
 
     const addPlayer = () => {
         const availableLetters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
@@ -110,8 +162,28 @@ const PlayerCalculator = () => {
     return (
         <div className="min-h-screen bg-gray-900 p-8">
             <div className="max-w-6xl mx-auto space-y-8">
-                <h1 className="text-4xl font-bold text-white text-center mb-12">Place Calculator</h1>
-                
+                <div className="flex justify-between items-center">
+                    <h1 className="text-4xl font-bold text-white text-center mb-12">Place Calculator</h1>
+                    <div className="flex gap-4">
+                        <button
+                            onClick={startNewGame}
+                            className="p-2 text-yellow-400 hover:text-yellow-300 transition-colors flex items-center gap-2"
+                            title="New Game"
+                        >
+                            <RotateCcw size={24} />
+                            <span>New Game</span>
+                        </button>
+                        <button
+                            onClick={undoLastRound}
+                            className="p-2 text-orange-400 hover:text-orange-300 transition-colors flex items-center gap-2"
+                            title="Undo Last Round"
+                        >
+                            <Undo size={24} />
+                            <span>Undo</span>
+                        </button>
+                    </div>
+                </div>
+
                 <div className="grid md:grid-cols-2 gap-6">
                     {/* Input Panel */}
                     <div className="bg-gray-800 rounded-xl p-6 shadow-lg border border-gray-700">
