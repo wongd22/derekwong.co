@@ -69,9 +69,9 @@ function HomePage() {
       {/* Projects Section */}
       <div className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8">
         <div className="text-center">
-            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">My Tools</h2>
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">Derek Wong</h2>
             <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400">
-                A collection of apps and websites I've built.
+                Keep Going
             </p>
         </div>
         <div className="mt-16 max-w-lg mx-auto grid gap-8 lg:grid-cols-3 lg:max-w-none">
