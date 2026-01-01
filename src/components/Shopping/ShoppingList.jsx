@@ -1,5 +1,5 @@
 import React from 'react';
-import { Edit2, Trash2, Check } from 'lucide-react';
+import { Edit2, Trash2, Check, ExternalLink } from 'lucide-react';
 import clsx from 'clsx';
 
 const ShoppingList = ({ items, onItemClick, onDeleteItem, onToggleBought }) => {
@@ -73,6 +73,11 @@ const ShoppingList = ({ items, onItemClick, onDeleteItem, onToggleBought }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
+                {item.link && (
+                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-400 hover:text-green-400 transition-colors">
+                    <ExternalLink className="w-5 h-5" />
+                  </a>
+                )}
                 <button
                   onClick={() => onItemClick(item)}
                   className="p-2 text-gray-400 hover:text-blue-300 transition-colors"
