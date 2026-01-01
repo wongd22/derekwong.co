@@ -24,7 +24,7 @@ const projects = [
     title: "Scorelab Admin",
     description: "Democratize basketball statistic",
     icon: "🏀 ",
-    link: "https://admin.scorelab.tech/",
+    link: "https://admin.scorelab.tech/login",
     external: true
   },
   {
