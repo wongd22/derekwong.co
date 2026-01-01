@@ -3,10 +3,30 @@ import { Routes, Route } from 'react-router-dom';
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import Place from './Place';
 import Shopping from './Shopping';
-import Hero from '../components/Hero';
 import ProjectCard from '../components/ProjectCard';
 
 const projects = [
+  {
+    title: "Google Looker Studio",
+    description: "View my data dashboards.",
+    icon: "💰",
+    link: "https://lookerstudio.google.com/s/lPZJlenfGRI",
+    external: true
+  },
+  {
+    title: "Spaceship",
+    description: "Track unfulfilled orders.",
+    icon: "🚀",
+    link: "https://ship.spaceshipapp.com/orders/unfulfilled",
+    external: true
+  },
+  {
+    title: "Clinical Owl Products",
+    description: "View product details in Notion.",
+    icon: "🦉",
+    link: "http://www.notion.so/clinical-owl/Products-462ec30476a24f9ab3276078cbca66e9?pvs=4",
+    external: true
+  },
   {
     title: "Shopping",
     description: "To Buy List",
@@ -45,8 +65,6 @@ const projects = [
 function HomePage() {
   return (
     <>
-      <Hero />
-
       {/* Projects Section */}
       <div className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8">
         <div className="text-center">
