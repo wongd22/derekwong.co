@@ -38,13 +38,13 @@ const projects = [
     title: "Shopping List",
     description: "To Buy List",
     icon: "🛒",
-    link: "/mypage/shopping"
+    link: "/shopping"
   },
   {
     title: "Place Calculator",
     description: "Easily calculate PLACE",
     icon: "🔢",
-    link: "/mypage/place"
+    link: "/place"
   },
   {
     title: "Scorelab",
