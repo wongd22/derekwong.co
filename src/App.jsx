@@ -1,11 +1,15 @@
 import React from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import MyPage from './pages/MyPage';
+import Shopping from './pages/Shopping';
 
 function App() {
   return (
     <Router>
-      <MyPage />
+      <Routes>
+        <Route path="/" element={<MyPage />} />
+        <Route path="/shopping" element={<Shopping />} />
+      </Routes>
     </Router>
   );
 }
