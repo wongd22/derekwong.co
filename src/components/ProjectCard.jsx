@@ -6,22 +6,22 @@ const ProjectCard = ({ project }) => {
       href={project.link}
       target={project.external ? "_blank" : undefined}
       rel={project.external ? "noopener noreferrer" : undefined}
-      className="group relative overflow-hidden"
+      className="group relative block overflow-hidden bg-white/10 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 hover:bg-white/20 transition-all duration-300"
     >
-      <div className="project-card bg-white/5 border border-white/10 rounded-xl p-6 hover:bg-white/10 transition-all duration-500 transform">
-        <div className="text-4xl mb-4 ">
+      <div className="p-6 sm:p-8">
+        <div className="text-4xl mb-4">
           {project.icon}
         </div>
-        <h3 className="text-xl font-semibold mb-2">
+        <h3 className="text-xl font-bold text-white mb-2">
           {project.title}
         </h3>
-        <p className="text-gray-400 text-sm">
+        <p className="text-gray-300 text-sm">
           {project.description}
         </p>
-        <div className="mt-4 inline-flex items-center text-xs font-medium text-white">
-          Learn More
-          <svg className="ml-2 w-3 h-3 transform group-hover:translate-x-2 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+        <div className="mt-6 inline-flex items-center text-xs font-semibold text-white/80">
+          <span>{project.external ? 'Visit Site' : 'Open App'}</span>
+          <svg className="ml-2 w-4 h-4 transform group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 8l4 4m0 0l-4 4m4-4H3" />
           </svg>
         </div>
       </div>

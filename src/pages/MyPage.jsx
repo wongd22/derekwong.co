@@ -48,9 +48,14 @@ function HomePage() {
       <Hero />
 
       {/* Projects Section */}
-      <div className="py-20 px-2">
-        <h2 className="text-4xl font-bold text-center mb-16">My Tools</h2>
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="py-24 sm:py-32 px-4 sm:px-6 lg:px-8">
+        <div className="text-center">
+            <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">My Tools</h2>
+            <p className="mt-4 max-w-2xl mx-auto text-lg text-gray-400">
+                A collection of apps and websites I've built.
+            </p>
+        </div>
+        <div className="mt-16 max-w-lg mx-auto grid gap-8 lg:grid-cols-3 lg:max-w-none">
           {projects.map((project, index) => (
             <ProjectCard key={index} project={project} />
           ))}
@@ -58,19 +63,24 @@ function HomePage() {
       </div>
 
       {/* Footer */}
-      <footer className="border-t border-white/10 py-12 text-center text-gray-400">
-        <div className="flex justify-center space-x-8 mb-8">
-          <a href="#" className="hover:text-white transition-colors">
-            <FaGithub size={24} />
-          </a>
-          <a href="#" className="hover:text-white transition-colors">
-            <FaLinkedin size={24} />
-          </a>
-          <a href="#" className="hover:text-white transition-colors">
-            <FaTwitter size={24} />
-          </a>
+      <footer className="bg-transparent">
+        <div className="max-w-7xl mx-auto py-12 px-4 sm:px-6 lg:px-8 overflow-hidden">
+          <div className="flex justify-center space-x-6">
+              <a href="https://github.com/wongd22" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">GitHub</span>
+                  <FaGithub size={24} />
+              </a>
+              <a href="https://www.linkedin.com/in/derek-wong-8b0101b8/" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">LinkedIn</span>
+                  <FaLinkedin size={24} />
+              </a>
+              <a href="https://twitter.com/wongd22" target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white">
+                  <span className="sr-only">Twitter</span>
+                  <FaTwitter size={24} />
+              </a>
+          </div>
+          <p className="mt-8 text-center text-base text-gray-400">&copy; 2024 Derek Wong. All rights reserved.</p>
         </div>
-        <p>© 2024 Derek Wong. All rights reserved.</p>
       </footer>
     </>
   );
@@ -79,11 +89,12 @@ function HomePage() {
 function MyPage() {
   return (
     <div className="min-h-screen bg-black text-white">
-      <Routes>
-        <Route path="/" element={<HomePage />} />
-        <Route path="/place" element={<Place />} />
-        <Route path="/shopping" element={<Shopping />} />
-      </Routes>
+        <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-gray-900 via-black to-gray-900 -z-10" />
+        <Routes>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/place" element={<Place />} />
+            <Route path="/shopping" element={<Shopping />} />
+        </Routes>
     </div>
   );
 }
