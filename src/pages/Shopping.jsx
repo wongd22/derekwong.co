@@ -47,32 +47,30 @@ const Shopping = () => {
   } = useItemDetailsManager(items);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
-      <div className="max-w-6xl mx-auto p-4 sm:p-8 space-y-8">
-        <div className="text-center pt-8 pb-12">
-          <h1 className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-300 to-blue-400">
-            Shopping List
-          </h1>
-        </div>
+    <div className="min-h-screen bg-black text-white">
+      <div className="max-w-3xl mx-auto p-4 sm:p-6 lg:p-8">
+        <header className="text-center py-8">
+          <h1 className="text-4xl font-bold">Shopping List</h1>
+        </header>
         
-        <FilterBar 
-          showBoughtItems={showBoughtItems}
-          setShowBoughtItems={setShowBoughtItems}
-          allTags={allTags}
-          selectedFilterTags={selectedFilterTags}
-          toggleFilterTag={toggleFilterTag}
-        />
+        <main className="space-y-6">
+          <AddItemForm onAddItem={handleAddItem} />
+          
+          <FilterBar 
+            showBoughtItems={showBoughtItems}
+            setShowBoughtItems={setShowBoughtItems}
+            allTags={allTags}
+            selectedFilterTags={selectedFilterTags}
+            toggleFilterTag={toggleFilterTag}
+          />
 
-        <AddItemForm
-          onAddItem={handleAddItem}
-        />
-
-        <ShoppingList
-          items={filteredItems}
-          onItemClick={handleItemClick}
-          onDeleteItem={handleDeleteItem}
-          onToggleBought={toggleItemBought}
-        />
+          <ShoppingList
+            items={filteredItems}
+            onItemClick={handleItemClick}
+            onDeleteItem={handleDeleteItem}
+            onToggleBought={toggleItemBought}
+          />
+        </main>
       </div>
 
       <ItemDetailsPanel

@@ -7,10 +7,17 @@ import ProjectCard from '../components/ProjectCard';
 
 const projects = [
   {
-    title: "Google Looker Studio",
-    description: "View my data dashboards.",
+    title: "Personal Expense",
+    description: "Input expense.",
     icon: "💰",
-    link: "https://lookerstudio.google.com/s/lPZJlenfGRI",
+    link: "https://forms.gle/KQuSFhzTKtXgf98k8",
+    external: true
+  },
+  {
+    title: "Well On Expense",
+    description: "Input expense.",
+    icon: "💰",
+    link: "https://forms.gle/5J55inBAGSwi6wrD8",
     external: true
   },
   {
@@ -28,7 +35,7 @@ const projects = [
     external: true
   },
   {
-    title: "Shopping",
+    title: "Shopping List",
     description: "To Buy List",
     icon: "🛒",
     link: "/mypage/shopping"
@@ -38,13 +45,6 @@ const projects = [
     description: "Easily calculate PLACE",
     icon: "🔢",
     link: "/mypage/place"
-  },
-  {
-    title: "Trading Journal",
-    description: "Track your trades",
-    icon: "📈",
-    link: "https://trading.derekwong.net",
-    external: true
   },
   {
     title: "Scorelab",
