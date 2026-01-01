@@ -73,8 +73,8 @@ const ShoppingList = ({ items, onItemClick, onDeleteItem, onToggleBought }) => {
                 </div>
               </div>
               <div className="flex items-center gap-2">
-                {item.link && (
-                  <a href={item.link} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-400 hover:text-green-400 transition-colors">
+                {item.url && (
+                  <a href={item.url} target="_blank" rel="noopener noreferrer" className="p-2 text-gray-400 hover:text-green-400 transition-colors">
                     <ExternalLink className="w-5 h-5" />
                   </a>
                 )}
