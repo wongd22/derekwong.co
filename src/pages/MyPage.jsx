@@ -21,6 +21,20 @@ const projects = [
     external: true
   },
   {
+    title: "Scorelab Admin",
+    description: "Democratize basketball statistic",
+    icon: "🏀 ",
+    link: "https://admin.scorelab.tech/",
+    external: true
+  },
+  {
+    title: "Clinical Owl",
+    description: "Make Medical Easier",
+    icon: "📝",
+    link: "https://admin.clinicalowl.io/",
+    external: true
+  },
+  {
     title: "Spaceship",
     description: "Track unfulfilled orders.",
     icon: "🚀",
@@ -45,21 +59,8 @@ const projects = [
     description: "Easily calculate PLACE",
     icon: "🔢",
     link: "/place"
-  },
-  {
-    title: "Scorelab",
-    description: "Democratize basketball statistic",
-    icon: "🏀 ",
-    link: "https://www.scorelab.tech",
-    external: true
-  },
-  {
-    title: "Clinical Owl",
-    description: "Make Medical Easier",
-    icon: "📝",
-    link: "https://www.clinicalowl.io",
-    external: true
   }
+
 ];
 
 function HomePage() {
