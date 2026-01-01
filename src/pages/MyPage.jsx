@@ -21,6 +21,12 @@ const projects = [
     external: true
   },
   {
+    title: "Shopping List",
+    description: "To Buy List",
+    icon: "🛒",
+    link: "/shopping"
+  },
+  {
     title: "Scorelab Admin",
     description: "Democratize basketball statistic",
     icon: "🏀 ",
@@ -47,12 +53,6 @@ const projects = [
     icon: "🦉",
     link: "http://www.notion.so/clinical-owl/Products-462ec30476a24f9ab3276078cbca66e9?pvs=4",
     external: true
-  },
-  {
-    title: "Shopping List",
-    description: "To Buy List",
-    icon: "🛒",
-    link: "/shopping"
   },
   {
     title: "Place Calculator",
