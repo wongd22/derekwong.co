@@ -64,7 +64,7 @@ const projects = [
     title: "Post Generator",
     description: "Generate PNG",
     icon: "🤖",
-    link: "https://opal.google/?flow=drive:/1pADyavjEjZUwAQpene7Kmx4Jlp8JdLmj&shared&mode=app"
+    link: ""
   }
 
 ];
