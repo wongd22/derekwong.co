@@ -61,7 +61,7 @@ const projects = [
     link: "/place"
   },
   {
-    title: "Post Generator",
+    title: "Post Generator 222",
     description: "Generate PNG",
     icon: "🤖",
     link: ""
