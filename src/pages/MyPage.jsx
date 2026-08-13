@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom';
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import Place from './Place';
 import Shopping from './Shopping';
+import PreTradeRitual from './trading-rituals';
 import ProjectCard from '../components/ProjectCard';
 
 const projects = [
@@ -27,6 +28,12 @@ const projects = [
     link: "/shopping"
   },
   {
+    title: "Trading Rituals",
+    description: "Golden Rule",
+    icon: "🚀",
+    link: "/trading-rituals"
+  },
+  {
     title: "Scorelab Admin",
     description: "Democratize basketball statistic",
     icon: "🏀 ",
@@ -38,20 +45,6 @@ const projects = [
     description: "Make Medical Easier",
     icon: "📝",
     link: "https://admin.clinicalowl.io/",
-    external: true
-  },
-  {
-    title: "Spaceship",
-    description: "Track unfulfilled orders.",
-    icon: "🚀",
-    link: "https://ship.spaceshipapp.com/orders/unfulfilled",
-    external: true
-  },
-  {
-    title: "Clinical Owl Products",
-    description: "View product details in Notion.",
-    icon: "🦉",
-    link: "http://www.notion.so/clinical-owl/Products-462ec30476a24f9ab3276078cbca66e9?pvs=4",
     external: true
   },
   {
@@ -113,6 +106,7 @@ function MyPage() {
             <Route path="/" element={<HomePage />} />
             <Route path="/place" element={<Place />} />
             <Route path="/shopping" element={<Shopping />} />
+            <Route path="/trading-rituals" element={<PreTradeRitual />} />
         </Routes>
     </div>
   );
