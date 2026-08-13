@@ -139,7 +139,10 @@ function Example({ trade, kind, className = "" }) {
 
 export default function PreTradeRitual() {
   const [i, setI] = useState(0);
-  const touch = useRef({ x: 0, y: 0, t: 0 });
+  const [drag, setDrag] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const deckRef = useRef(null);
+  const touch = useRef({ x: 0, y: 0, t: 0, axis: null, active: false, w: 1 });
 
   const slides = [
     <section className="ptr-slide ptr-cover">
@@ -282,28 +285,86 @@ export default function PreTradeRitual() {
     return () => window.removeEventListener("keydown", onKey);
   }, [i, go, total]);
 
+  // Every slide scrolls on its own — start each one at the top on mobile.
+  useEffect(() => {
+    const el = deckRef.current?.querySelectorAll(".ptr-slide")[i];
+    if (el) el.scrollTop = 0;
+  }, [i]);
+
   const onTouchStart = (e) => {
-    touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY, t: Date.now() };
+    if (e.touches.length !== 1) return;
+    const t = e.touches[0];
+    touch.current = {
+      x: t.clientX,
+      y: t.clientY,
+      t: Date.now(),
+      axis: null,
+      active: true,
+      w: deckRef.current?.clientWidth || window.innerWidth || 1,
+    };
   };
-  const onTouchEnd = (e) => {
-    const dx = e.changedTouches[0].clientX - touch.current.x;
-    const dy = e.changedTouches[0].clientY - touch.current.y;
-    if (Date.now() - touch.current.t < 800 && Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5) {
-      go(dx < 0 ? i + 1 : i - 1);
+
+  const onTouchMove = (e) => {
+    if (!touch.current.active) return;
+    const t = e.touches[0];
+    const dx = t.clientX - touch.current.x;
+    const dy = t.clientY - touch.current.y;
+    if (!touch.current.axis) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      touch.current.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      if (touch.current.axis === "x") setDragging(true);
     }
+    if (touch.current.axis !== "x") return;
+    // Rubber-band at the first and last slide.
+    const atEdge = (dx > 0 && i === 0) || (dx < 0 && i === total - 1);
+    setDrag(atEdge ? dx * 0.3 : dx);
+  };
+
+  const onTouchEnd = (e) => {
+    if (!touch.current.active) return;
+    const dx = (e.changedTouches[0]?.clientX ?? touch.current.x) - touch.current.x;
+    const dt = Math.max(1, Date.now() - touch.current.t);
+    const velocity = dx / dt; // px per ms
+    const threshold = Math.min(90, touch.current.w * 0.16);
+    const axis = touch.current.axis;
+    touch.current.active = false;
+    setDragging(false);
+    setDrag(0);
+    if (axis !== "x") return;
+    if (dx <= -threshold || velocity < -0.35) go(i + 1);
+    else if (dx >= threshold || velocity > 0.35) go(i - 1);
   };
 
   return (
-    <div className="ptr" onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
+    <div className="ptr">
       <style>{css}</style>
-      <main className="ptr-deck">
-        {slides.map((el, n) =>
-          cloneElement(el, {
-            key: n,
-            className: `${el.props.className || ""}${n === i ? " is-active" : ""}`.trim(),
-          })
-        )}
+      <div
+        className="ptr-progress"
+        style={{ transform: `scaleX(${(i + 1) / total})` }}
+        aria-hidden="true"
+      />
+      <main
+        className="ptr-deck"
+        ref={deckRef}
+        onTouchStart={onTouchStart}
+        onTouchMove={onTouchMove}
+        onTouchEnd={onTouchEnd}
+        onTouchCancel={onTouchEnd}
+      >
+        <div
+          className={`ptr-track${dragging ? " is-dragging" : ""}`}
+          style={{ transform: `translate3d(calc(${-i * 100}% + ${drag}px), 0, 0)` }}
+        >
+          {slides.map((el, n) =>
+            cloneElement(el, {
+              key: n,
+              "aria-hidden": n === i ? undefined : "true",
+              className: `${el.props.className || ""}${n === i ? " is-active" : ""}`.trim(),
+            })
+          )}
+        </div>
       </main>
+      {i === 0 && <div className="ptr-hint">Swipe →</div>}
       <div className="ptr-bar">
         <div className="ptr-dots">
           {slides.map((_, n) => (
@@ -311,18 +372,21 @@ export default function PreTradeRitual() {
               key={n}
               className={`ptr-dot${n === i ? " is-on" : ""}`}
               aria-label={`Go to slide ${n + 1}`}
+              aria-current={n === i ? "true" : undefined}
               onClick={() => go(n)}
-            />
+            >
+              <span />
+            </button>
           ))}
         </div>
         <div className="ptr-count">
           {i + 1} / {total}
         </div>
         <div className="ptr-nav">
-          <button aria-label="Previous slide" onClick={() => go(i - 1)}>
+          <button aria-label="Previous slide" disabled={i === 0} onClick={() => go(i - 1)}>
             ←
           </button>
-          <button aria-label="Next slide" onClick={() => go(i + 1)}>
+          <button aria-label="Next slide" disabled={i === total - 1} onClick={() => go(i + 1)}>
             →
           </button>
         </div>
@@ -336,18 +400,33 @@ const css = `
   --ptr-bg:#191919; --ptr-surface:#202020; --ptr-raised:#2a2a29; --ptr-line:rgba(255,255,255,.14);
   --ptr-txt:#fff; --ptr-dim:rgba(255,255,255,.62);
   --ptr-blue:#5E9FE8; --ptr-green:#72BC8F; --ptr-orange:#DE9255; --ptr-red:#E97366;
-  position:relative; height:100dvh; width:100%; overflow:hidden;
+  --ptr-bar-h:calc(52px + env(safe-area-inset-bottom));
+  position:relative; height:100vh; height:100svh; width:100%; overflow:hidden;
+  overscroll-behavior:contain; -webkit-tap-highlight-color:transparent;
   background:var(--ptr-bg); color:var(--ptr-txt);
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC",Helvetica,Arial,sans-serif;
   font-size:16px; line-height:1.5;
 }
 .ptr *, .ptr *::before, .ptr *::after { box-sizing:border-box; margin:0; padding:0; }
-.ptr-deck { height:100%; width:100%; position:relative; }
-.ptr-slide {
-  position:absolute; inset:0; padding:56px 64px; display:none;
-  flex-direction:column; justify-content:center; overflow:hidden;
+.ptr-deck { height:100%; width:100%; position:relative; overflow:hidden; touch-action:pan-y; }
+.ptr-track {
+  display:flex; height:100%; width:100%; will-change:transform;
+  transition:transform .55s cubic-bezier(.22,.9,.28,1);
 }
-.ptr-slide.is-active { display:flex; }
+.ptr-track.is-dragging { transition:none; }
+.ptr-slide {
+  flex:0 0 100%; width:100%; height:100%;
+  padding:56px 64px calc(var(--ptr-bar-h) + 16px);
+  display:flex; flex-direction:column; justify-content:center;
+  overflow-y:auto; overflow-x:hidden; -webkit-overflow-scrolling:touch; overscroll-behavior:contain;
+  opacity:.22; transform:scale(.94);
+  transition:opacity .45s ease, transform .55s cubic-bezier(.22,.9,.28,1);
+}
+.ptr-slide.is-active { opacity:1; transform:none; }
+.ptr-slide:not(.is-active) { pointer-events:none; }
+.ptr-progress { position:absolute; top:0; left:0; right:0; height:3px; z-index:3; background:var(--ptr-blue); transform-origin:0 50%; transition:transform .55s cubic-bezier(.22,.9,.28,1); }
+.ptr-hint { position:absolute; left:50%; bottom:calc(var(--ptr-bar-h) + 8px); z-index:2; font-size:12px; letter-spacing:.14em; text-transform:uppercase; color:var(--ptr-dim); pointer-events:none; animation:ptrHint 2.4s ease-in-out infinite; }
+@keyframes ptrHint { 0%,100% { opacity:.3; transform:translate(-50%,0) } 50% { opacity:.9; transform:translate(calc(-50% + 7px),0) } }
 .ptr h1 { font-size:clamp(34px,4.4vw,60px); line-height:1.1; letter-spacing:-.02em; font-weight:700; }
 .ptr h2 { font-size:clamp(22px,2.5vw,32px); line-height:1.2; letter-spacing:-.01em; font-weight:700; }
 .ptr-kicker { color:var(--ptr-dim); font-size:13px; letter-spacing:.14em; text-transform:uppercase; margin-bottom:18px; }
@@ -408,26 +487,60 @@ const css = `
 .ptr-gate .ptr-final { margin-top:36px; border:1px solid rgba(233,115,102,.5); background:rgba(233,115,102,.10); border-radius:14px; padding:22px 34px; font-size:22px; font-weight:600; }
 .ptr-gate .ptr-final span { color:var(--ptr-red); }
 
-.ptr-bar { position:absolute; left:0; right:0; bottom:0; height:44px; display:flex; align-items:center; justify-content:space-between; padding:0 20px; font-size:12px; color:var(--ptr-dim); background:linear-gradient(to top,rgba(25,25,25,.95),transparent); }
-.ptr-dots { display:flex; gap:6px; }
-.ptr-dot { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.22); cursor:pointer; border:none; padding:0; }
-.ptr-dot.is-on { background:var(--ptr-blue); }
+.ptr-bar { position:absolute; left:0; right:0; bottom:0; z-index:4; min-height:var(--ptr-bar-h); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 14px env(safe-area-inset-bottom); font-size:12px; color:var(--ptr-dim); background:linear-gradient(to top,rgba(25,25,25,.96) 55%,transparent); }
+.ptr-dots { display:flex; align-items:center; flex-wrap:wrap; }
+.ptr-dot { display:grid; place-items:center; width:22px; height:36px; background:none; border:none; padding:0; cursor:pointer; }
+.ptr-dot span { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.24); transition:background .25s ease, transform .25s ease; }
+.ptr-dot.is-on span { background:var(--ptr-blue); transform:scale(1.6); }
+.ptr-count { font-variant-numeric:tabular-nums; white-space:nowrap; }
 .ptr-nav { display:flex; gap:8px; }
-.ptr-nav button { background:var(--ptr-raised); border:1px solid var(--ptr-line); color:var(--ptr-txt); border-radius:8px; min-width:44px; height:30px; cursor:pointer; font-size:14px; }
+.ptr-nav button { background:var(--ptr-raised); border:1px solid var(--ptr-line); color:var(--ptr-txt); border-radius:10px; min-width:48px; height:36px; cursor:pointer; font-size:16px; transition:transform .15s ease, background .2s ease, opacity .2s ease; }
+.ptr-nav button:active { transform:scale(.93); background:#343433; }
+.ptr-nav button:disabled { opacity:.32; cursor:default; }
 .ptr-nav button:focus-visible, .ptr-dot:focus-visible { outline:2px solid var(--ptr-blue); outline-offset:2px; }
 
 @media (max-width:900px) {
-  .ptr-slide { padding:32px 22px 60px; overflow-y:auto; }
-  .ptr-funnel { grid-template-columns:1fr; gap:10px; }
-  .ptr-step { padding:14px; }
-  .ptr-cols { grid-template-columns:1fr; }
+  .ptr { font-size:15px; }
+  .ptr-slide { padding:28px 20px calc(var(--ptr-bar-h) + 18px); justify-content:flex-start; }
+  .ptr h1 { font-size:clamp(27px,7.4vw,40px); }
+  .ptr h2 { font-size:clamp(20px,5.6vw,28px); }
+  .ptr-kicker { font-size:11px; margin-bottom:12px; }
+  .ptr-cover { justify-content:center; }
+  .ptr-cover .ptr-rule { font-size:16px; margin-top:20px; }
+  .ptr-pills { margin-top:24px; gap:8px; }
+  .ptr-pill { font-size:13px; padding:7px 13px; }
+  .ptr-funnel { grid-template-columns:1fr; gap:10px; margin-top:18px; }
+  .ptr-step { padding:14px; gap:6px; }
+  .ptr-step h3 { font-size:16px; }
+  .ptr-warn { margin-top:16px; padding:13px 15px; font-size:14px; }
+  .ptr-cols { grid-template-columns:1fr; gap:14px; margin-top:18px; }
+  .ptr-panel { padding:18px; }
   .ptr-check { grid-template-columns:1fr; }
-  .ptr-example { flex-direction:column; gap:20px; align-items:flex-start; }
-  .ptr-ex-right, .ptr-ex-right.is-wide { flex:none; width:100%; }
-  .ptr-ex-right img { max-height:42dvh; }
+  .ptr-example { flex-direction:column; gap:18px; align-items:flex-start; justify-content:flex-start; padding:24px 20px calc(var(--ptr-bar-h) + 18px); }
+  .ptr-ex-left, .ptr-ex-right, .ptr-ex-right.is-wide { flex:none; width:100%; }
+  .ptr-ex-right { order:-1; }
+  .ptr-ex-right img { width:100%; max-height:36svh; object-fit:contain; }
+  .ptr blockquote { margin-top:16px; padding:13px 15px; font-size:15px; }
+  .ptr-gate { justify-content:center; }
+  .ptr-gate .ptr-sub { font-size:16px; }
+  .ptr-gate .ptr-final { margin-top:24px; padding:18px 22px; font-size:18px; }
+}
+@media (max-width:620px) {
+  .ptr-dots { display:none; }
+  .ptr-bar { justify-content:space-between; }
+  .ptr-nav { flex:1; justify-content:flex-end; }
+  .ptr-nav button { min-width:64px; height:42px; font-size:18px; }
 }
 @media (prefers-reduced-motion:no-preference) {
-  .ptr-slide.is-active { animation:ptrFade .22s ease; }
+  .ptr-slide.is-active > * { animation:ptrUp .5s cubic-bezier(.22,.9,.28,1) both; }
+  .ptr-slide.is-active > *:nth-child(2) { animation-delay:.05s }
+  .ptr-slide.is-active > *:nth-child(3) { animation-delay:.1s }
+  .ptr-slide.is-active > *:nth-child(4) { animation-delay:.15s }
+  .ptr-slide.is-active > *:nth-child(5) { animation-delay:.2s }
 }
-@keyframes ptrFade { from { opacity:0 } to { opacity:1 } }
+@media (prefers-reduced-motion:reduce) {
+  .ptr-track, .ptr-slide, .ptr-progress { transition:none !important; }
+  .ptr-hint { animation:none; }
+}
+@keyframes ptrUp { from { opacity:0; transform:translateY(16px) } to { opacity:1; transform:none } }
 `;
