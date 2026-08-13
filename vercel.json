@@ -1,7 +1,8 @@
 {
     "rewrites": [
       { "source": "/shopping", "destination": "/index.html" },
-      { "source": "/place", "destination": "/index.html" }
+      { "source": "/place", "destination": "/index.html" },
+      { "source": "/trading-rituals", "destination": "/index.html" }
     ]
   }
   
