@@ -8,6 +8,22 @@ import bad2 from "../components/assets/bad-2.jpg";
 import bad3 from "../components/assets/bad-3.jpg";
 import bad4 from "../components/assets/bad-4.jpg";
 
+// ── Account & risk config ─────────────────────────────────────────────
+// R is a percentage of the step balance — never a USD amount.
+// Every phase is deliberately the same game: 10R of buffer, ~12R to pass.
+const STEPS = {
+  step1: { label: "Step 1 · $5,000", balance: 5000, rPct: 0.005, buffer: 10, target: 12 },
+  step2: { label: "Step 2 · $10,000", balance: 10000, rPct: 0.005, buffer: 10, target: 12 },
+  step3: { label: "Step 3 · $15,000", balance: 15000, rPct: 0.005, buffer: 10, target: 12 },
+  funded: { label: "Funded · $20,000", balance: 20000, rPct: 0.004, buffer: 10, target: 12.5 },
+};
+
+const ACTIVE_STEP = "step1";
+const DAILY_STOP_R = 2;
+const WEEKLY_STOP_R = 4;
+const TF_ORDER = ["1m", "5m", "15m", "1H", "4H", "D", "W"];
+const LS_KEY = "ptr-state-v1";
+
 const WINS = [
   {
     img: good1,
@@ -137,6 +153,230 @@ function Example({ trade, kind, className = "" }) {
   );
 }
 
+function readState() {
+  if (typeof window === "undefined") return null;
+  try {
+    return JSON.parse(window.localStorage.getItem(LS_KEY) || "null");
+  } catch (e) {
+    return null;
+  }
+}
+
+function TradeGate({ className = "", ...rest }) {
+  const step = STEPS[ACTIVE_STEP];
+  const R = Math.round(step.balance * step.rPct * 100) / 100;
+
+  const [state, setState] = useState({ usedR: 0, dayR: 0, weekR: 0 });
+  const [stopTf, setStopTf] = useState("");
+  const [targetTf, setTargetTf] = useState("");
+  const [checks, setChecks] = useState(0);
+  const [stopPips, setStopPips] = useState("");
+  const [atr, setAtr] = useState("");
+  const [pipValue, setPipValue] = useState("");
+
+  // Hydrate after mount so SSR and the client render the same markup.
+  useEffect(() => {
+    const saved = readState();
+    if (saved) setState(saved);
+  }, []);
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(LS_KEY, JSON.stringify(state));
+    } catch (e) {
+      /* storage blocked — the gate still works for this session */
+    }
+  }, [state]);
+
+  const bulletsLeft = Math.max(0, step.buffer - state.usedR);
+  const tfOk = stopTf !== "" && stopTf === targetTf;
+  const checksOk = checks >= 5;
+  const bulletsOk = bulletsLeft > 0;
+  const dayOk = state.dayR > -DAILY_STOP_R;
+  const weekOk = state.weekR > -WEEKLY_STOP_R;
+  const atrOk =
+    atr !== "" && stopPips !== "" && Number(stopPips) >= Number(atr) * 0.5;
+
+  const gates = [
+    {
+      key: "tf",
+      ok: tfOk,
+      label: "Stop TF = Target TF",
+      detail: tfOk
+        ? `Both on ${stopTf} — the stop marks where the idea is wrong`
+        : "A stop on a lower TF than the target is a fake R:R",
+    },
+    {
+      key: "check",
+      ok: checksOk,
+      label: "Checklist ≥ 5 of 7",
+      detail: `${checks} ticked`,
+    },
+    {
+      key: "atr",
+      ok: atrOk,
+      label: "Stop ≥ 0.5 × ATR(15m)",
+      detail: atrOk
+        ? "Stop sits outside the noise band"
+        : "Enter both numbers. A tighter stop is a 1m stop in disguise",
+    },
+    {
+      key: "bullets",
+      ok: bulletsOk,
+      label: "Bullets remaining",
+      detail: `${bulletsLeft} of ${step.buffer}R left before the account dies`,
+    },
+    {
+      key: "day",
+      ok: dayOk,
+      label: `Daily stop (−${DAILY_STOP_R}R)`,
+      detail: `${state.dayR > 0 ? "+" : ""}${state.dayR}R today`,
+    },
+    {
+      key: "week",
+      ok: weekOk,
+      label: `Weekly stop (−${WEEKLY_STOP_R}R)`,
+      detail: `${state.weekR > 0 ? "+" : ""}${state.weekR}R this week`,
+    },
+  ];
+
+  const cleared = gates.every((g) => g.ok);
+  const lots =
+    stopPips && pipValue && Number(stopPips) > 0 && Number(pipValue) > 0
+      ? (R / (Number(stopPips) * Number(pipValue))).toFixed(2)
+      : "—";
+
+  const record = (r) =>
+    setState((s) => ({
+      usedR: r < 0 ? s.usedR + Math.abs(r) : s.usedR,
+      dayR: Math.round((s.dayR + r) * 100) / 100,
+      weekR: Math.round((s.weekR + r) * 100) / 100,
+    }));
+
+  return (
+    <section className={`ptr-slide ptr-gate ${className}`.trim()} {...rest}>
+      <div className="ptr-kicker">Last gate · 沒有答案，只有合理的行為</div>
+      <h2>No entry until the gate is green.</h2>
+
+      <div className="ptr-gate-grid">
+        <div className="ptr-panel">
+          <h3>1 · Timeframe lock</h3>
+          <label className="ptr-field">
+            <span>Stop timeframe</span>
+            <select value={stopTf} onChange={(e) => setStopTf(e.target.value)}>
+              <option value="">—</option>
+              {TF_ORDER.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <label className="ptr-field">
+            <span>Target timeframe</span>
+            <select value={targetTf} onChange={(e) => setTargetTf(e.target.value)}>
+              <option value="">—</option>
+              {TF_ORDER.map((t) => (
+                <option key={t} value={t}>{t}</option>
+              ))}
+            </select>
+          </label>
+          <label className="ptr-field">
+            <span>Checklist ticked (of 7)</span>
+            <input
+              type="number"
+              min="0"
+              max="7"
+              value={checks}
+              onChange={(e) => setChecks(Number(e.target.value))}
+            />
+          </label>
+        </div>
+
+        <div className="ptr-panel">
+          <h3>2 · Size in R</h3>
+          <div className="ptr-rbox">
+            <div>
+              <span>1R</span>
+              <b>{(step.rPct * 100).toFixed(2)}%</b>
+            </div>
+            <div>
+              <span>{step.label}</span>
+              <b className="ptr-usd">${R}</b>
+            </div>
+          </div>
+          <label className="ptr-field">
+            <span>Stop distance (pips)</span>
+            <input type="number" value={stopPips} onChange={(e) => setStopPips(e.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>ATR(15m) in pips</span>
+            <input type="number" value={atr} onChange={(e) => setAtr(e.target.value)} />
+          </label>
+          <label className="ptr-field">
+            <span>Pip value per lot ($)</span>
+            <input type="number" value={pipValue} onChange={(e) => setPipValue(e.target.value)} />
+          </label>
+          <div className="ptr-lots">
+            Size: <b>{lots}</b> lots
+          </div>
+        </div>
+
+        <div className="ptr-panel">
+          <h3>3 · Bullets</h3>
+          <div className="ptr-bullets">
+            {Array.from({ length: step.buffer }).map((_, n) => (
+              <span key={n} className={n < bulletsLeft ? "is-live" : "is-spent"} />
+            ))}
+          </div>
+          <p className="ptr-bullet-note">
+            {bulletsLeft} of {step.buffer}R left. Target is +{step.target}R to advance.
+          </p>
+          <div className="ptr-tally">
+            <span>Today {state.dayR > 0 ? "+" : ""}{state.dayR}R</span>
+            <span>Week {state.weekR > 0 ? "+" : ""}{state.weekR}R</span>
+          </div>
+          <div className="ptr-actions">
+            <button onClick={() => record(-1)}>−1R</button>
+            <button onClick={() => record(1)}>+1R</button>
+            <button onClick={() => record(2)}>+2R</button>
+            <button className="ptr-ghost" onClick={() => setState((s) => ({ ...s, dayR: 0 }))}>
+              New day
+            </button>
+            <button
+              className="ptr-ghost"
+              onClick={() => setState((s) => ({ ...s, dayR: 0, weekR: 0 }))}
+            >
+              New week
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <ul className="ptr-gatelist">
+        {gates.map((g) => (
+          <li key={g.key} className={g.ok ? "is-ok" : "is-no"}>
+            <b>
+              {g.ok ? "✓" : "✕"} {g.label}
+            </b>
+            <span>{g.detail}</span>
+          </li>
+        ))}
+      </ul>
+
+      <div className={`ptr-final${cleared ? " is-cleared" : ""}`}>
+        {cleared ? (
+          <>
+            Gate clear — <span>execute at 1R, then stop touching it.</span>
+          </>
+        ) : (
+          <>
+            Gate closed — <span>DO NOT TRADE.</span>
+          </>
+        )}
+      </div>
+    </section>
+  );
+}
+
 export default function PreTradeRitual() {
   const [i, setI] = useState(0);
   const [drag, setDrag] = useState(0);
@@ -159,8 +399,9 @@ export default function PreTradeRitual() {
         direction, there is no trade to fine-tune.
       </p>
       <div className="ptr-pills">
-        <span className="ptr-pill">1 loss max per day</span>
-        <span className="ptr-pill">1–3% risk per trade</span>
+        <span className="ptr-pill">1R = 0.5% — never think in USD</span>
+        <span className="ptr-pill">−2R = day over</span>
+        <span className="ptr-pill">10R buffer · 12R to pass</span>
         <span className="ptr-pill">Need 5 of 7 to fire</span>
       </div>
     </section>,
@@ -236,7 +477,8 @@ export default function PreTradeRitual() {
         <div className="ptr-panel">
           <h3>Non-negotiables</h3>
           <ul className="ptr-stack">
-            <li><b>Risk</b>1–3% per trade. Size so a loss feels boring.</li>
+            <li><b>Risk</b>Exactly 1R. 1R = 0.5% of the step balance. Never think in dollars.</li>
+            <li><b>Timeframe</b>Stop and target must live on the same timeframe. No exceptions.</li>
             <li><b>TP &amp; SL</b>Both set at entry. Never manage from memory.</li>
             <li><b>At 1:1</b>Move SL to breakeven. 食半留半.</li>
             <li><b>After a loss</b>Stop. One loss per day, then review.</li>
@@ -249,17 +491,7 @@ export default function PreTradeRitual() {
     ...WINS.map((t) => <Example trade={t} kind="win" />),
     ...LOSSES.map((t) => <Example trade={t} kind="loss" />),
 
-    <section className="ptr-slide ptr-gate">
-      <div className="ptr-kicker">Last gate</div>
-      <h1>沒有答案，只有合理的行為</h1>
-      <p className="ptr-sub">
-        You cannot control the result. You can only control whether the sequence was followed and the size was
-        right.
-      </p>
-      <div className="ptr-final">
-        Fewer than 5 of 7? <span>DO NOT TRADE.</span>
-      </div>
-    </section>,
+    <TradeGate />,
   ];
 
   const total = slides.length;
@@ -481,11 +713,47 @@ const css = `
 .is-good .ptr-ex-left ul li::before { background:var(--ptr-green); }
 .is-bad .ptr-ex-left ul li::before { background:var(--ptr-red); }
 
-.ptr-gate { align-items:center; text-align:center; }
-.ptr-gate h1 { max-width:900px; }
-.ptr-gate .ptr-sub { color:var(--ptr-dim); font-size:18px; margin-top:20px; max-width:620px; }
-.ptr-gate .ptr-final { margin-top:36px; border:1px solid rgba(233,115,102,.5); background:rgba(233,115,102,.10); border-radius:14px; padding:22px 34px; font-size:22px; font-weight:600; }
+.ptr-gate { align-items:stretch; }
+.ptr-gate h2 { margin-bottom:20px; }
+.ptr-gate-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:16px; }
+.ptr-gate .ptr-panel { display:flex; flex-direction:column; gap:12px; }
+.ptr-field { display:flex; flex-direction:column; gap:5px; }
+.ptr-field > span { font-size:12px; letter-spacing:.08em; text-transform:uppercase; color:var(--ptr-dim); }
+.ptr-field select, .ptr-field input { width:100%; background:var(--ptr-raised); border:1px solid var(--ptr-line); color:var(--ptr-txt); border-radius:8px; padding:9px 11px; font-size:15px; font-family:inherit; }
+.ptr-field select:focus-visible, .ptr-field input:focus-visible { outline:2px solid var(--ptr-blue); outline-offset:1px; }
+.ptr-rbox { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+.ptr-rbox > div { background:var(--ptr-raised); border:1px solid var(--ptr-line); border-radius:10px; padding:12px; display:flex; flex-direction:column; gap:3px; }
+.ptr-rbox span { font-size:11px; letter-spacing:.08em; text-transform:uppercase; color:var(--ptr-dim); }
+.ptr-rbox b { font-size:22px; font-variant-numeric:tabular-nums; }
+.ptr-rbox .ptr-usd { color:var(--ptr-dim); font-size:16px; font-weight:500; }
+.ptr-lots { margin-top:auto; font-size:15px; color:var(--ptr-dim); }
+.ptr-lots b { color:var(--ptr-txt); font-size:20px; font-variant-numeric:tabular-nums; }
+.ptr-bullets { display:flex; gap:6px; flex-wrap:wrap; }
+.ptr-bullets span { width:16px; height:16px; border-radius:50%; }
+.ptr-bullets .is-live { background:var(--ptr-green); }
+.ptr-bullets .is-spent { background:none; border:1px solid var(--ptr-line); }
+.ptr-bullet-note { font-size:14px; color:var(--ptr-dim); }
+.ptr-tally { display:flex; gap:14px; font-size:14px; font-variant-numeric:tabular-nums; }
+.ptr-actions { display:flex; gap:6px; flex-wrap:wrap; margin-top:auto; }
+.ptr-actions button { background:var(--ptr-raised); border:1px solid var(--ptr-line); color:var(--ptr-txt); border-radius:8px; padding:8px 12px; font-size:14px; font-family:inherit; cursor:pointer; }
+.ptr-actions button:active { transform:scale(.95); }
+.ptr-actions .ptr-ghost { color:var(--ptr-dim); background:none; }
+.ptr-gatelist { list-style:none; display:grid; grid-template-columns:repeat(3,1fr); gap:8px; margin-top:16px; }
+.ptr-gatelist li { border:1px solid var(--ptr-line); border-radius:10px; padding:10px 13px; display:flex; flex-direction:column; gap:2px; }
+.ptr-gatelist li b { font-size:14px; }
+.ptr-gatelist li span { font-size:12px; color:var(--ptr-dim); }
+.ptr-gatelist .is-ok { border-color:rgba(114,188,143,.45); background:rgba(114,188,143,.08); }
+.ptr-gatelist .is-ok b { color:var(--ptr-green); }
+.ptr-gatelist .is-no { border-color:rgba(233,115,102,.45); background:rgba(233,115,102,.08); }
+.ptr-gatelist .is-no b { color:var(--ptr-red); }
+.ptr-gate .ptr-final { margin-top:16px; border:1px solid rgba(233,115,102,.5); background:rgba(233,115,102,.10); border-radius:14px; padding:18px 26px; font-size:20px; font-weight:600; text-align:center; }
 .ptr-gate .ptr-final span { color:var(--ptr-red); }
+.ptr-gate .ptr-final.is-cleared { border-color:rgba(114,188,143,.5); background:rgba(114,188,143,.10); }
+.ptr-gate .ptr-final.is-cleared span { color:var(--ptr-green); }
+@media (max-width:900px) {
+  .ptr-gate-grid, .ptr-gatelist { grid-template-columns:1fr; }
+  .ptr-gate .ptr-final { font-size:17px; padding:15px 18px; }
+}
 
 .ptr-bar { position:absolute; left:0; right:0; bottom:0; z-index:4; min-height:var(--ptr-bar-h); display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 14px env(safe-area-inset-bottom); font-size:12px; color:var(--ptr-dim); background:linear-gradient(to top,rgba(25,25,25,.96) 55%,transparent); }
 .ptr-dots { display:flex; align-items:center; flex-wrap:wrap; }
