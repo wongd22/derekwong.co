@@ -41,10 +41,10 @@ const projects = [
     external: true
   },
   {
-    title: "Clinical Owl",
-    description: "Make Medical Easier",
-    icon: "📝",
-    link: "https://admin.clinicalowl.io/",
+    title: "Home Consumables",
+    description: "Make Home Consumables Easier",
+    icon: "🏠",
+    link: "https://home-consumables.ai.studio",
     external: true
   },
   {
