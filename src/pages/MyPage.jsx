@@ -41,10 +41,10 @@ const projects = [
     external: true
   },
   {
-    title: "Home Consumables",
-    description: "Make Home Consumables Easier",
+    title: "Home Routine",
+    description: "Make Home Routine Easier",
     icon: "🏠",
-    link: "https://home-consumables.ai.studio",
+    link: "https://home-routine.ai.studio/",
     external: true
   },
   {
