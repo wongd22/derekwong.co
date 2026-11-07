@@ -4,6 +4,7 @@ import MyPage from './pages/MyPage';
 import Shopping from './pages/Shopping';
 import Place from './pages/Place';
 import PreTradeRitual from './pages/trading-rituals';
+import Spending from './pages/Spending';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/shopping" element={<Shopping />} />
         <Route path="/place" element={<Place />} />
         <Route path="/trading-rituals" element={<PreTradeRitual />} />
+        <Route path="/spending" element={<Spending />} />
       </Routes>
     </Router>
   );
