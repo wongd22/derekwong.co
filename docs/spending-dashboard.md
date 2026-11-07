@@ -16,7 +16,7 @@ The site is a Vite and React single page app. `src/App.jsx` mounts `src/pages/Sp
 
 Styles live in `src/styles/spending.css` and apply only under `.spending-shell`, plus a `body:has(.spending-shell)` rule so the black site background does not show through while this route is open. Other pages keep their own look. The typeface is Manrope, loaded from `@fontsource/manrope` only by this page. Copy on the page avoids hyphen characters. Motion is limited to transform and opacity, and it turns off under `prefers-reduced-motion`.
 
-The page is a listing plus a spend map: a slim icon rail, a month title, filter pills, search, sort, list or grid cards, and a right hand panel of amount pins. The pins are envelopes and entries, not a city map. A homepage card can open `/spending`. It does not show amounts.
+There is no map. The page is a centered dex style status screen on a warm cream field: a status banner, two room bars, envelope cards, and a recent list. The marketplace screenshot was a palette reference only (cream page, charcoal controls, sage, and warm coral). It is not the layout. Envelope cards use a thick rounded frame, a color stripe, the name, and a plain HKD amount. Category chips are colored type badges. Everyday remaining and plan safe remaining read as room bars against the everyday target and the plan safe cap, with the figures still written out. Status uses the banner color. Search, month, source, envelope, sort, and list or grid stay, restyled to the same chrome. A homepage card can open `/spending`. It does not show amounts.
 
 ### State and the gate
 
@@ -27,7 +27,7 @@ On open the page calls `GET /api/spending/session`.
 - After `POST /api/spending/login`, it calls `GET /api/spending/summary?fresh=1`.
 - `POST /api/spending/logout` clears the cookie.
 
-The browser keeps filter, search, sort, and list or grid state. Those only hide cards and pins. The status line always uses the full month. Changing the month asks the API again. Refresh asks again with `fresh=1`, so a form submitted a minute earlier can show up. Amounts are not stored in `localStorage`.
+The browser keeps filter, search, sort, and list or grid state. Those only hide cards and recent rows. The status line always uses the full month. Changing the month asks the API again. Refresh asks again with `fresh=1`, so a form submitted a minute earlier can show up. Amounts are not stored in `localStorage`.
 
 If the ledgers are not connected, the signed in page says so and does not invent totals. `SPENDING_FIXTURE=1` is a local layout switch only. Production ignores it. A fixture response is labeled sample data.
 

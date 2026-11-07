@@ -1,13 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Home, Link2, List, LayoutGrid, LogOut, PenLine, RefreshCw, Search, SlidersHorizontal, Wallet } from 'lucide-react';
+import { Home, Link2, List, LayoutGrid, LogOut, PenLine, RefreshCw, SlidersHorizontal } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import '@fontsource/manrope/latin-400.css';
 import '@fontsource/manrope/latin-500.css';
 import '@fontsource/manrope/latin-600.css';
 import '@fontsource/manrope/latin-700.css';
 import '@fontsource/manrope/latin-800.css';
-import ListingCard from '../components/spending/ListingCard';
-import SpendMap from '../components/spending/SpendMap';
+import ListingCard, { typeColor } from '../components/spending/ListingCard';
 import { formatHkd, formatMonthOption } from '../../shared/spending/format.js';
 import '../styles/spending.css';
 
@@ -27,6 +26,35 @@ function monthOptions(latestKey) {
     options.push({ key, label: formatMonthOption(year, month) });
   }
   return options;
+}
+
+function roomRatio(remaining, target) {
+  if (remaining == null || !target) return 0;
+  return Math.max(0, Math.min(100, (remaining / target) * 100));
+}
+
+function RoomMeter({ label, remaining, target, caption, muted }) {
+  const ratio = roomRatio(remaining, target);
+  const low = !muted && remaining != null && ratio > 0 && ratio <= 35;
+  return (
+    <div className={`sp-hp ${muted ? 'is-muted' : ''} ${low ? 'is-low' : ''}`}>
+      <div className="sp-hp-top">
+        <span>{label}</span>
+        <strong>{remaining == null ? 'Not offered' : formatHkd(remaining)}</strong>
+      </div>
+      <div
+        className="sp-hp-track"
+        role="meter"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={target || 0}
+        aria-valuenow={remaining == null ? 0 : remaining}
+      >
+        <span style={{ width: `${ratio}%` }} />
+      </div>
+      <small>{caption}</small>
+    </div>
+  );
 }
 
 function updatedLabel(iso) {
@@ -64,7 +92,6 @@ export default function Spending() {
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('amount');
   const [layout, setLayout] = useState('list');
-  const [mapOpen, setMapOpen] = useState(false);
   const [visible, setVisible] = useState(4);
   const [copied, setCopied] = useState(false);
 
@@ -232,7 +259,7 @@ export default function Spending() {
   }, [data, source, envelope, kind, query, sort]);
 
   const hotYear = data?.yearly.filter((item) => item.state === 'over' || item.state === 'close') || [];
-  const dotClass = data?.taxMonth
+  const bannerClass = data?.taxMonth
     ? 'is-tax'
     : data?.underLogged.active
       ? 'is-thin'
@@ -240,32 +267,27 @@ export default function Spending() {
         ? 'is-stop'
         : data?.status.code === 'tighten'
           ? 'is-tighten'
-          : '';
+          : 'is-track';
 
   return (
     <div className="spending-shell">
-      <div className="sp-frame">
-        <nav className="sp-rail" aria-label="Spending">
-          <span className="sp-mark" aria-hidden="true"><Wallet size={18} /></span>
-          <Link to="/" aria-label="Home"><Home size={18} /></Link>
-          <button type="button" className="is-active" aria-label="Search" onClick={() => document.querySelector('.sp-search input')?.focus()}>
-            <Search size={18} />
-          </button>
-          <a href={data?.forms?.personal || PERSONAL_FORM} target="_blank" rel="noreferrer" aria-label="Add a personal entry" title="Add a personal entry">
+      <div className="sp-page">
+        <nav className="sp-nav" aria-label="Spending">
+          <Link to="/" className="sp-icon" aria-label="Home"><Home size={18} /></Link>
+          <span className="sp-brand">Spending</span>
+          <span className="sp-nav-spacer" />
+          <a className="sp-icon" href={data?.forms?.personal || PERSONAL_FORM} target="_blank" rel="noreferrer" aria-label="Add a personal entry" title="Add a personal entry">
             <PenLine size={18} />
           </a>
-          <a href={data?.forms?.wellOn || WELLON_FORM} target="_blank" rel="noreferrer" aria-label="Add a Well On entry" title="Add a Well On entry">
+          <a className="sp-icon" href={data?.forms?.wellOn || WELLON_FORM} target="_blank" rel="noreferrer" aria-label="Add a Well On entry" title="Add a Well On entry">
             <PenLine size={18} />
           </a>
-          <span className="sp-rail-spacer" />
           {phase === 'ready' && (
-            <button type="button" aria-label="Sign out" onClick={signOut}>
+            <button type="button" className="sp-icon" aria-label="Sign out" onClick={signOut}>
               <LogOut size={18} />
             </button>
           )}
         </nav>
-
-        <div className={`sp-main ${phase === 'ready' ? 'is-ready' : ''}`}>
           {phase === 'checking' && <p className="sp-quiet">Checking the gate.</p>}
 
           {phase === 'gate' && (
@@ -308,43 +330,43 @@ export default function Spending() {
 
           {phase === 'ready' && data && (
             <>
-              {data.fixture && <p className="sp-banner">Sample data. This is not the live ledger.</p>}
-              <header className="sp-top">
-                <div>
-                  <h1>{data.month.title}</h1>
-                  <p>{data.subhead}</p>
-                </div>
-                <div className="sp-actions">
-                  <button type="button" className="sp-ghost" onClick={copyLink}>
-                    <Link2 size={16} aria-hidden="true" />
-                    {copied ? 'Copied' : 'Copy link'}
-                  </button>
-                  <button type="button" className="sp-ghost" onClick={() => loadMonth(month, { fresh: true })} disabled={busy}>
-                    <RefreshCw size={16} aria-hidden="true" />
-                    Refresh
-                  </button>
-                </div>
-              </header>
-
-              <section className="sp-status" aria-live="polite">
-                <div className="sp-headline">
-                  <span className={`sp-dot ${dotClass}`} aria-hidden="true" />
+              {data.fixture && <p className="sp-sample">Sample data. This is not the live ledger.</p>}
+              <section className={`sp-status ${bannerClass}`} aria-live="polite">
+                <div className="sp-status-top">
                   <div>
+                    <p className="sp-kicker">{data.status.label}</p>
+                    <h1>{data.month.title}</h1>
                     <h2>{data.headline}</h2>
-                    <p className="sp-quiet">{data.status.label}. {updatedLabel(data.asOf)} Hong Kong time.</p>
+                    <p className="sp-quiet">{data.subhead} {updatedLabel(data.asOf)} Hong Kong time.</p>
+                  </div>
+                  <div className="sp-actions">
+                    <button type="button" className="sp-ghost" onClick={copyLink}>
+                      <Link2 size={16} aria-hidden="true" />
+                      {copied ? 'Copied' : 'Copy link'}
+                    </button>
+                    <button type="button" className="sp-ghost" onClick={() => loadMonth(month, { fresh: true })} disabled={busy}>
+                      <RefreshCw size={16} aria-hidden="true" />
+                      Refresh
+                    </button>
                   </div>
                 </div>
-                <div className={`sp-metric ${data.offerRoom ? '' : 'is-muted'}`}>
-                  <span>Everyday remaining</span>
-                  <strong>{data.remainingAverage == null ? 'Not offered' : formatHkd(data.remainingAverage)}</strong>
-                  <small>{data.remainingCaption}</small>
+                <div className="sp-rooms">
+                  <RoomMeter
+                    label="Everyday remaining"
+                    remaining={data.remainingAverage}
+                    target={data.everydayTarget}
+                    caption={data.remainingCaption}
+                    muted={!data.offerRoom}
+                  />
+                  <RoomMeter
+                    label="Plan safe remaining"
+                    remaining={data.remainingPlan}
+                    target={data.planCap}
+                    caption={data.planCaption}
+                    muted={!data.offerRoom}
+                  />
                 </div>
-                <div className={`sp-metric ${data.offerRoom ? '' : 'is-muted'}`}>
-                  <span>Plan safe remaining</span>
-                  <strong>{data.remainingPlan == null ? 'Not offered' : formatHkd(data.remainingPlan)}</strong>
-                  <small>{data.planCaption}</small>
-                </div>
-                <div className="sp-span">
+                <div>
                   <div className="sp-lines">
                     {data.lines.map((line) => (
                       <div key={line.id}>
@@ -445,7 +467,6 @@ export default function Spending() {
                   <button type="button" className={`sp-text ${sort === 'amount' ? 'is-active' : ''}`} onClick={() => setSort('amount')}>Sort by amount</button>
                 </div>
                 <div className="sp-view" role="group" aria-label="Layout">
-                  <button type="button" className={`sp-map-toggle ${mapOpen ? 'is-active' : ''}`} onClick={() => setMapOpen((open) => !open)}>Map</button>
                   <button type="button" aria-label="List" className={layout === 'list' ? 'is-active' : ''} onClick={() => setLayout('list')}>
                     <List size={16} />
                   </button>
@@ -454,10 +475,9 @@ export default function Spending() {
                   </button>
                 </div>
               </div>
-              <p className="sp-note">The status line uses the full month. Filters only change the list and the map.</p>
+              <p className="sp-note">The status line uses the full month. Filters only change the cards.</p>
 
-              <div className="sp-split">
-                <div className="sp-list">
+              <div>
                   {filtered.cards.length === 0 ? (
                     <div className="sp-empty">Nothing matches that search.</div>
                   ) : (
@@ -476,7 +496,9 @@ export default function Spending() {
                         <li key={item.id}>
                           <span>{item.dateLabel}</span>
                           <span>
-                            {item.sourceLabel} · {item.category}
+                            {item.sourceLabel}
+                            {' '}
+                            <span className="sp-type" style={{ background: typeColor(item.category) }}>{item.category}</span>
                             {item.remarks ? ` · ${item.remarks}` : ''}
                             {item.payer ? ` · ${item.payer}` : ''}
                           </span>
@@ -515,20 +537,9 @@ export default function Spending() {
                     <a href={data.forms.personal} target="_blank" rel="noreferrer">Add a personal entry</a>
                     <a href={data.forms.wellOn} target="_blank" rel="noreferrer">Add a Well On entry</a>
                   </div>
-                </div>
               </div>
-              <SpendMap
-                envelopes={filtered.cards}
-                transactions={filtered.recent}
-                open={mapOpen}
-                onSelect={(id) => {
-                  setEnvelope(id);
-                  setVisible(4);
-                }}
-              />
             </>
           )}
-        </div>
       </div>
     </div>
   );
