@@ -151,15 +151,18 @@ const PlayerCalculator = () => {
 
     const cumulativeResults = calculateCumulativeResults();
 
+    const scoreTone = (value) =>
+        value > 0 ? 'text-[#146C43]' : value < 0 ? 'text-[#B42318]' : 'text-[#5E5E5A]';
+
     return (
-        <div className="min-h-screen font-sans bg-gradient-to-br from-blue-300 via-purple-400 to-pink-400 p-4 sm:p-6 md:p-8 text-slate-800">
+        <div className="min-h-screen font-sans bg-[#F5F5F3] p-4 sm:p-6 md:p-8 text-[#181818]">
             <div className="max-w-7xl mx-auto space-y-8">
                 <header className="flex flex-col sm:flex-row justify-between items-center space-y-4 sm:space-y-0">
-                    <h1 className="text-4xl md:text-5xl font-bold text-white text-center drop-shadow-lg">Place Calculator</h1>
+                    <h1 className="text-4xl md:text-5xl font-bold text-[#181818] text-center">Place Calculator</h1>
                     <div className="flex gap-3">
                         <button
                             onClick={startNewGame}
-                            className="bg-white/30 backdrop-blur-lg rounded-lg p-2 pr-3 text-slate-700 hover:bg-white/40 transition-all border border-white/50 flex items-center gap-2 shadow-md"
+                            className="bg-[#FFFFFF] rounded-lg p-2 pr-3 text-[#181818] hover:bg-[#F0F0EE] active:bg-[#E3E3E0] transition-colors duration-300 border border-[#E3E3E0] flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F3]"
                             title="New Game"
                         >
                             <RotateCcw size={20} />
@@ -167,7 +170,7 @@ const PlayerCalculator = () => {
                         </button>
                         <button
                             onClick={undoLastRound}
-                            className="bg-white/30 backdrop-blur-lg rounded-lg p-2 pr-3 text-slate-700 hover:bg-white/40 transition-all border border-white/50 flex items-center gap-2 shadow-md"
+                            className="bg-[#FFFFFF] rounded-lg p-2 pr-3 text-[#181818] hover:bg-[#F0F0EE] active:bg-[#E3E3E0] transition-colors duration-300 border border-[#E3E3E0] flex items-center gap-2 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F5F5F3]"
                             title="Undo Last Round"
                         >
                             <Undo size={20} />
@@ -180,10 +183,14 @@ const PlayerCalculator = () => {
                     {/* Input & Results Panel */}
                     <div className="lg:col-span-2 space-y-8">
                         {/* Input Card */}
-                        <div className="bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
+                        <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E3E0] p-6">
                             <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-2xl font-bold text-slate-800">Input Scores</h2>
-                                <button onClick={addPlayer} className="text-blue-600 hover:text-blue-500 transition-colors" title="Add Player">
+                                <h2 className="text-2xl font-bold text-[#181818]">Input Scores</h2>
+                                <button
+                                    onClick={addPlayer}
+                                    className="text-[#181818] hover:text-[#000000] rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF]"
+                                    title="Add Player"
+                                >
                                     <PlusCircle size={28} />
                                 </button>
                             </div>
@@ -194,7 +201,7 @@ const PlayerCalculator = () => {
                                             type="text"
                                             value={player.name}
                                             onChange={(e) => handlePlayerNameChange(player.id, e.target.value)}
-                                            className="w-full bg-black/10 border-transparent rounded-md px-3 py-1 text-sm font-semibold text-slate-700 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-black/5"
+                                            className="w-full bg-[#F0F0EE] border border-[#E3E3E0] rounded-md px-3 py-1 text-sm font-semibold text-[#181818] placeholder:text-[#5E5E5A] focus:outline-none focus:bg-[#FFFFFF] focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF] transition-colors duration-300"
                                         />
                                         <div className="flex gap-2">
                                             <input
@@ -202,9 +209,13 @@ const PlayerCalculator = () => {
                                                 value={currentScores[player.id]}
                                                 onChange={(e) => handleInputChange(player.id, e.target.value)}
                                                 placeholder="Score"
-                                                className="w-full bg-black/10 border-transparent rounded-md pl-3 pr-1 py-2 text-slate-800 placeholder-slate-500 focus:ring-2 focus:ring-blue-500 focus:bg-black/5"
+                                                className="w-full bg-[#F0F0EE] border border-[#E3E3E0] rounded-md pl-3 pr-1 py-2 text-[#181818] placeholder:text-[#5E5E5A] focus:outline-none focus:bg-[#FFFFFF] focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF] transition-colors duration-300"
                                             />
-                                            <button onClick={() => removePlayer(player.id)} className="text-red-500 hover:text-red-400 transition-colors" title="Remove Player">
+                                            <button
+                                                onClick={() => removePlayer(player.id)}
+                                                className="text-[#5E5E5A] hover:text-[#181818] rounded-full transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF]"
+                                                title="Remove Player"
+                                            >
                                                 <MinusCircle size={24} />
                                             </button>
                                         </div>
@@ -213,23 +224,20 @@ const PlayerCalculator = () => {
                             </div>
                             <button
                                 onClick={handleSubmitRound}
-                                className="mt-8 w-full bg-gradient-to-r from-blue-500 to-purple-500 text-white py-3 px-4 rounded-lg font-bold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 transition-all"
+                                className="mt-8 w-full bg-[#181818] text-[#FFFFFF] py-3 px-4 rounded-lg font-bold text-lg hover:bg-[#272727] active:bg-[#000000] transition-colors duration-300 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#181818] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FFFFFF]"
                             >
                                 Submit Round
                             </button>
                         </div>
                         
                         {/* Cumulative Results Card */}
-                        <div className="bg-white/40 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6">
-                            <h2 className="text-2xl font-bold text-slate-800 mb-6">Cumulative Results</h2>
+                        <div className="bg-[#FFFFFF] rounded-2xl border border-[#E3E3E0] p-6">
+                            <h2 className="text-2xl font-bold text-[#181818] mb-6">Cumulative Results</h2>
                             <div className="space-y-3">
                                 {players.map(player => (
-                                    <div key={player.id} className="flex justify-between items-center p-3 bg-black/10 rounded-lg">
-                                        <span className="font-bold text-slate-700">{player.name}</span>
-                                        <span className={`font-bold text-lg ${
-                                            cumulativeResults[player.id] > 0 ? 'text-green-600' : 
-                                            cumulativeResults[player.id] < 0 ? 'text-red-600' : 'text-slate-600'
-                                        }`}>
+                                    <div key={player.id} className="flex justify-between items-center p-3 bg-[#F0F0EE] rounded-lg">
+                                        <span className="font-bold text-[#181818]">{player.name}</span>
+                                        <span className={`font-bold text-lg ${scoreTone(cumulativeResults[player.id])}`}>
                                             {cumulativeResults[player.id] > 0 ? '+' : ''}{cumulativeResults[player.id] ?? 0}
                                         </span>
                                     </div>
@@ -239,29 +247,26 @@ const PlayerCalculator = () => {
                     </div>
 
                     {/* Rounds History Panel */}
-                    <div className="lg:col-span-3 bg-white/30 backdrop-blur-xl rounded-2xl shadow-xl border border-white/50 p-6 overflow-hidden">
-                        <h2 className="text-2xl font-bold text-slate-800 mb-6">Rounds History</h2>
+                    <div className="lg:col-span-3 bg-[#FFFFFF] rounded-2xl border border-[#E3E3E0] p-6 overflow-hidden">
+                        <h2 className="text-2xl font-bold text-[#181818] mb-6">Rounds History</h2>
                         <div className="overflow-x-auto">
                             <table className="w-full min-w-[600px] text-sm text-left">
-                                <thead className="text-slate-600">
-                                    <tr className="border-b border-white/40">
+                                <thead className="text-[#5E5E5A]">
+                                    <tr className="border-b border-[#E3E3E0]">
                                         <th className="px-3 py-3 font-semibold">#</th>
                                         {players.map(player => <th key={player.id} className="px-3 py-3 font-semibold">{player.name}</th>)}
                                         {players.map(player => <th key={`${player.id}-diff`} className="px-3 py-3 font-semibold text-center">{player.name} +/-</th>)}
                                     </tr>
                                 </thead>
-                                <tbody className="text-slate-700">
+                                <tbody className="text-[#181818]">
                                     {rounds.slice().reverse().map((round) => (
-                                        <tr key={round.roundNumber} className="border-b border-white/20 hover:bg-black/5">
+                                        <tr key={round.roundNumber} className="border-b border-[#E3E3E0] hover:bg-[#F0F0EE] transition-colors duration-300">
                                             <td className="px-3 py-3 font-bold">{round.roundNumber}</td>
                                             {players.map(player => (
                                                 <td key={`${round.roundNumber}-${player.id}-score`} className="px-3 py-3">{round.scores[player.id] ?? '–'}</td>
                                             ))}
                                             {players.map(player => (
-                                                <td key={`${round.roundNumber}-${player.id}-diff`} className={`px-3 py-3 font-bold text-center ${
-                                                    round.differences[player.id] > 0 ? 'text-green-600' : 
-                                                    round.differences[player.id] < 0 ? 'text-red-600' : 'text-slate-500'
-                                                }`}>
+                                                <td key={`${round.roundNumber}-${player.id}-diff`} className={`px-3 py-3 font-bold text-center ${scoreTone(round.differences[player.id])}`}>
                                                     {round.differences[player.id] != null ? 
                                                         `${round.differences[player.id] > 0 ? '+' : ''}${round.differences[player.id]}` : '–'
                                                     }
