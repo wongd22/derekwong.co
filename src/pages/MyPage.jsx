@@ -8,6 +8,12 @@ import ProjectCard from '../components/ProjectCard';
 
 const projects = [
   {
+    title: "Spending",
+    description: "Private month check",
+    icon: "📒",
+    link: "/spending"
+  },
+  {
     title: "Personal Expense",
     description: "Input expense.",
     icon: "💰",
