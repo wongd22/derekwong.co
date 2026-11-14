@@ -4,18 +4,14 @@ import {
   stageShoppingItem,
   updateShoppingItem,
   deleteShoppingItem,
-  deleteImage
+  deleteImage,
+  uploadImage
 } from '../lib/firebase';
 import { buildShoppingView } from '../lib/shoppingView';
+import { isPlaceholderName, nameFromFile, prepareCaptureFile } from '../lib/shoppingCapture';
+import { fetchLinkPreview, followUpUpdates, previewUpdates } from '../lib/shoppingPreview';
 
 const UNDO_MS = 30000;
-
-async function removeStoredItem(item) {
-  if (item?.imageUrl) {
-    await deleteImage(item.imageUrl);
-  }
-  await deleteShoppingItem(item.id);
-}
 
 export const useShoppingListManager = () => {
   const [serverItems, setServerItems] = useState([]);
@@ -26,14 +22,44 @@ export const useShoppingListManager = () => {
   const [optimisticItems, setOptimisticItems] = useState([]);
   const [overrides, setOverrides] = useState({});
   const [hiddenIds, setHiddenIds] = useState(() => new Set());
+  const [localImages, setLocalImages] = useState({});
   const [addError, setAddError] = useState('');
   const [actionError, setActionError] = useState('');
   const [pendingDelete, setPendingDelete] = useState(null);
+  const [pendingBought, setPendingBought] = useState(null);
 
   const pendingWrites = useRef(new Map());
   const cancelledIds = useRef(new Set());
+  const voidIds = useRef(new Set());
   const pendingDeleteRef = useRef(null);
+  const pendingBoughtRef = useRef(null);
   const undoTimer = useRef(null);
+  const boughtTimer = useRef(null);
+  const autoNames = useRef(new Map());
+  const knownItems = useRef(new Map());
+  const ownPhotos = useRef(new Set());
+  const localImagesRef = useRef({});
+  const serverItemsRef = useRef(serverItems);
+  const overridesRef = useRef(overrides);
+  const mounted = useRef(true);
+  const writeBoughtRef = useRef(() => {});
+
+  serverItemsRef.current = serverItems;
+  overridesRef.current = overrides;
+
+  const setLocal = (next) => {
+    localImagesRef.current = next;
+    if (mounted.current) setLocalImages(next);
+  };
+
+  const releaseLocal = (id) => {
+    const url = localImagesRef.current[id];
+    if (!url) return;
+    URL.revokeObjectURL(url);
+    const next = { ...localImagesRef.current };
+    delete next[id];
+    setLocal(next);
+  };
 
   useEffect(() => {
     const unsubscribe = subscribeToShoppingList((nextItems) => {
@@ -78,14 +104,50 @@ export const useShoppingListManager = () => {
     });
   }, [serverItems]);
 
+  useEffect(() => {
+    setLocalImages((prev) => {
+      let changed = false;
+      const next = { ...prev };
+      for (const [id, url] of Object.entries(prev)) {
+        const server = serverItems.find((item) => item.id === id);
+        const image = overrides[id]?.imageUrl || server?.imageUrl;
+        if (image && !String(image).startsWith('blob:')) {
+          URL.revokeObjectURL(url);
+          delete next[id];
+          changed = true;
+        }
+      }
+      if (!changed) return prev;
+      localImagesRef.current = next;
+      return next;
+    });
+  }, [serverItems, overrides]);
+
+  const removeStoredItem = async (item) => {
+    voidIds.current.add(item.id);
+    try {
+      if (item?.imageUrl) await deleteImage(item.imageUrl);
+      await deleteShoppingItem(item.id);
+    } catch (error) {
+      voidIds.current.delete(item.id);
+      throw error;
+    }
+  };
+
   useEffect(() => () => {
+    mounted.current = false;
     if (undoTimer.current) clearTimeout(undoTimer.current);
+    if (boughtTimer.current) clearTimeout(boughtTimer.current);
     const pending = pendingDeleteRef.current;
     pendingDeleteRef.current = null;
-    if (!pending?.item || pending.item.pending) return;
-    removeStoredItem(pending.item).catch((error) => {
-      console.error('Error deleting item:', error);
-    });
+    if (pending?.item && !pending.item.pending) {
+      removeStoredItem(pending.item).catch((error) => {
+        console.error('Error deleting item:', error);
+      });
+    }
+    const bought = pendingBoughtRef.current;
+    pendingBoughtRef.current = null;
+    if (bought && !bought.cancelled) writeBoughtRef.current(bought);
   }, []);
 
   const view = useMemo(() => buildShoppingView({
@@ -105,9 +167,10 @@ export const useShoppingListManager = () => {
     if (undoTimer.current) clearTimeout(undoTimer.current);
     undoTimer.current = null;
     pendingDeleteRef.current = null;
-    setPendingDelete(null);
+    if (mounted.current) setPendingDelete(null);
     removeStoredItem(pending.item).catch((error) => {
       console.error('Error deleting item:', error);
+      if (!mounted.current) return;
       setHiddenIds((prev) => {
         const next = new Set(prev);
         next.delete(pending.item.id);
@@ -117,10 +180,144 @@ export const useShoppingListManager = () => {
     });
   };
 
+  const setBoughtFlag = (id, isBought) => {
+    setOptimisticItems((prev) => prev.map((entry) => (
+      entry.id === id ? { ...entry, isBought } : entry
+    )));
+    setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], isBought } }));
+  };
+
+  const writeBought = (entry) => {
+    if (!entry || entry.cancelled || voidIds.current.has(entry.id) || cancelledIds.current.has(entry.id)) return;
+    if (pendingWrites.current.has(entry.id)) {
+      const current = pendingWrites.current.get(entry.id);
+      pendingWrites.current.set(entry.id, { ...current, isBought: true });
+      if (mounted.current) {
+        setOptimisticItems((prev) => prev.map((item) => (
+          item.id === entry.id ? { ...item, isBought: true } : item
+        )));
+      }
+      return;
+    }
+    updateShoppingItem(entry.id, { isBought: true }).catch((error) => {
+      console.error('Error toggling item status:', error);
+      if (!mounted.current) return;
+      setOverrides((prev) => {
+        const next = { ...prev };
+        delete next[entry.id];
+        return next;
+      });
+      setActionError("Couldn't update that. It's unchanged.");
+    });
+  };
+  writeBoughtRef.current = writeBought;
+
+  const finishPendingBought = () => {
+    const entry = pendingBoughtRef.current;
+    if (!entry) return;
+    if (boughtTimer.current) clearTimeout(boughtTimer.current);
+    boughtTimer.current = null;
+    pendingBoughtRef.current = null;
+    if (mounted.current) setPendingBought(null);
+    if (!entry.cancelled) writeBought(entry);
+  };
+
+  const undoBought = () => {
+    const entry = pendingBoughtRef.current;
+    if (!entry) return;
+    entry.cancelled = true;
+    if (boughtTimer.current) clearTimeout(boughtTimer.current);
+    boughtTimer.current = null;
+    pendingBoughtRef.current = null;
+    setPendingBought(null);
+    setBoughtFlag(entry.id, false);
+  };
+
+  const beginBought = (item) => {
+    if (pendingBoughtRef.current?.id === item.id) return;
+    finishPendingBought();
+    const entry = { id: item.id, name: item.name || 'This item', cancelled: false };
+    pendingBoughtRef.current = entry;
+    setPendingBought(entry);
+    setBoughtFlag(item.id, true);
+    boughtTimer.current = setTimeout(() => {
+      if (pendingBoughtRef.current !== entry || entry.cancelled) return;
+      pendingBoughtRef.current = null;
+      boughtTimer.current = null;
+      setPendingBought(null);
+      writeBought(entry);
+    }, UNDO_MS);
+  };
+
+  const currentItem = (id) => {
+    const pending = pendingWrites.current.get(id);
+    if (pending) return pending;
+    const server = serverItemsRef.current.find((item) => item.id === id);
+    if (server) {
+      knownItems.current.delete(id);
+      return { ...server, ...overridesRef.current[id] };
+    }
+    return knownItems.current.get(id) || null;
+  };
+
+  const applyPreview = async (id, preview) => {
+    if (cancelledIds.current.has(id) || voidIds.current.has(id)) return;
+    const current = currentItem(id);
+    if (!current) return;
+    const updates = previewUpdates({
+      name: current.name,
+      imageUrl: current.imageUrl || '',
+      autoName: autoNames.current.get(id) || current.name,
+      preview,
+      keepImage: ownPhotos.current.has(id) || Boolean(localImagesRef.current[id])
+    });
+    if (!updates) return;
+
+    const pending = pendingWrites.current.get(id);
+    if (pending) pendingWrites.current.set(id, { ...pending, ...updates });
+    if (knownItems.current.has(id)) {
+      knownItems.current.set(id, { ...knownItems.current.get(id), ...updates });
+    }
+    if (mounted.current) {
+      setOptimisticItems((prev) => prev.map((item) => (
+        item.id === id ? { ...item, ...updates } : item
+      )));
+      if (!pending) {
+        setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], ...updates } }));
+      }
+    }
+    if (pending) return;
+    try {
+      await updateShoppingItem(id, updates);
+    } catch (error) {
+      console.error('Error updating link preview:', error);
+    }
+  };
+
+  const attachFile = (id, file) => {
+    uploadImage(file, id).then(async (imageUrl) => {
+      if (voidIds.current.has(id) || cancelledIds.current.has(id)) return;
+      if (mounted.current) {
+        setOverrides((prev) => ({ ...prev, [id]: { ...prev[id], imageUrl } }));
+      }
+      await updateShoppingItem(id, { imageUrl });
+    }).catch((error) => {
+      console.error('Error uploading image:', error);
+      releaseLocal(id);
+      ownPhotos.current.delete(id);
+      if (mounted.current) setActionError("Saved it. The photo didn't attach.");
+    });
+  };
+
   const handleAddItem = async (input) => {
-    const name = (typeof input === 'string' ? input : input?.name || '').trim();
+    const incomingFile = typeof input === 'string' ? null : input?.file || null;
     const url = (typeof input === 'string' ? '' : input?.url || '').trim();
+    let name = (typeof input === 'string' ? input : input?.name || '').trim();
+    if (!name && incomingFile) name = nameFromFile(incomingFile);
     if (!name) return false;
+
+    const prepared = incomingFile ? prepareCaptureFile(incomingFile) : { file: null, problem: '' };
+    const problem = prepared.problem || (typeof input === 'string' ? '' : input?.problem || '');
 
     setAddError('');
     setActionError('');
@@ -136,25 +333,59 @@ export const useShoppingListManager = () => {
       isBought: false
     });
 
+    autoNames.current.set(staged.id, isPlaceholderName(name, url) ? name : '');
+    if (prepared.file) ownPhotos.current.add(staged.id);
+
+    if (prepared.file) {
+      const localUrl = URL.createObjectURL(prepared.file);
+      setLocal({ ...localImagesRef.current, [staged.id]: localUrl });
+    }
+
     pendingWrites.current.set(staged.id, staged.item);
     setOptimisticItems((prev) => [{ id: staged.id, ...staged.item, pending: true }, ...prev]);
 
+    if (url) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), 6000);
+      fetchLinkPreview(url, { signal: controller.signal })
+        .then((preview) => applyPreview(staged.id, preview))
+        .catch(() => {})
+        .finally(() => clearTimeout(timer));
+    }
+
     try {
-      const latest = pendingWrites.current.get(staged.id) || staged.item;
-      await staged.commit(latest);
+      const written = { ...(pendingWrites.current.get(staged.id) || staged.item) };
+      await staged.commit(written);
+      const after = pendingWrites.current.get(staged.id) || written;
       pendingWrites.current.delete(staged.id);
+      knownItems.current.set(staged.id, { ...after });
+
       if (cancelledIds.current.has(staged.id)) {
         cancelledIds.current.delete(staged.id);
+        knownItems.current.delete(staged.id);
+        releaseLocal(staged.id);
         await deleteShoppingItem(staged.id);
-        setOptimisticItems((prev) => prev.filter((item) => item.id !== staged.id));
+        if (mounted.current) {
+          setOptimisticItems((prev) => prev.filter((item) => item.id !== staged.id));
+        }
+        return false;
       }
+
+      const follow = followUpUpdates(written, after);
+      if (Object.keys(follow).length) await updateShoppingItem(staged.id, follow);
+      if (prepared.file) attachFile(staged.id, prepared.file);
+      if (mounted.current && problem === 'size') setActionError('Saved it. The photo is over 5MB.');
+      else if (mounted.current && problem === 'photo') setActionError('Saved it. That photo did not attach.');
       return true;
     } catch (error) {
       console.error('Error adding item:', error);
       pendingWrites.current.delete(staged.id);
       cancelledIds.current.delete(staged.id);
-      setOptimisticItems((prev) => prev.filter((item) => item.id !== staged.id));
-      setAddError("Couldn't save that. Try again.");
+      releaseLocal(staged.id);
+      if (mounted.current) {
+        setOptimisticItems((prev) => prev.filter((item) => item.id !== staged.id));
+        setAddError("Couldn't save that. Try again.");
+      }
       return false;
     }
   };
@@ -165,12 +396,21 @@ export const useShoppingListManager = () => {
     if (pendingDeleteRef.current?.item?.id === id) return;
 
     if (item.pending || pendingWrites.current.has(id)) {
+      if (pendingBoughtRef.current?.id === id) {
+        pendingBoughtRef.current.cancelled = true;
+        if (boughtTimer.current) clearTimeout(boughtTimer.current);
+        boughtTimer.current = null;
+        pendingBoughtRef.current = null;
+        setPendingBought(null);
+      }
       cancelledIds.current.add(id);
       pendingWrites.current.delete(id);
+      releaseLocal(id);
       setOptimisticItems((prev) => prev.filter((entry) => entry.id !== id));
       return;
     }
 
+    if (pendingBoughtRef.current?.id === id) finishPendingBought();
     finishPendingDelete();
     setActionError('');
     setHiddenIds((prev) => {
@@ -216,11 +456,19 @@ export const useShoppingListManager = () => {
     const nextBought = !item.isBought;
     setActionError('');
 
+    if (nextBought) {
+      beginBought(item);
+      return;
+    }
+
+    if (pendingBoughtRef.current?.id === item.id) {
+      undoBought();
+      return;
+    }
+
     if (item.pending || pendingWrites.current.has(item.id)) {
       const current = pendingWrites.current.get(item.id);
-      if (current) {
-        pendingWrites.current.set(item.id, { ...current, isBought: nextBought });
-      }
+      if (current) pendingWrites.current.set(item.id, { ...current, isBought: nextBought });
       setOptimisticItems((prev) => prev.map((entry) => (
         entry.id === item.id ? { ...entry, isBought: nextBought } : entry
       )));
@@ -259,11 +507,15 @@ export const useShoppingListManager = () => {
     addError,
     actionError,
     pendingDelete,
+    pendingBought,
+    localImages,
     setShowBoughtItems,
+    setSelectedFilterTags,
     toggleFilterTag,
     handleAddItem,
     handleDeleteItem,
     undoDelete,
+    undoBought,
     toggleItemBought,
     clearAddError
   };

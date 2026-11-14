@@ -1,3 +1,5 @@
+import { isGenericTitle } from '../../shared/shopping/preview.js';
+
 const URL_IN_TEXT = /https?:\/\/[^\s<>]+/i;
 const BARE_HOST = /^(?:[a-z0-9-]+\.)+[a-z]{2,}(?:[/:?#]\S*)?$/i;
 const FILE_EXT = new Set([
@@ -111,4 +113,139 @@ export function parseCapture(raw) {
   }
 
   return { name: clampName(text), url: '' };
+}
+
+export function isPlaceholderName(name, url) {
+  if (!name || !url) return false;
+  if (name === 'Saved link' || name === 'Photo') return true;
+  try {
+    const host = new URL(url).hostname.replace(/^www\./i, '');
+    if (name.toLowerCase() === host.toLowerCase()) return true;
+  } catch {
+    return false;
+  }
+  return name === nameFromUrl(url);
+}
+
+function hostOf(link) {
+  try {
+    return new URL(link).hostname.replace(/^www\./i, '') || 'Saved link';
+  } catch {
+    return 'Saved link';
+  }
+}
+
+function firstLink(value) {
+  if (typeof value !== 'string') return '';
+  return parseCapture(value)?.url || '';
+}
+
+function opaqueName(name) {
+  return Boolean(name) && /^[A-Za-z0-9_-]{8,}$/.test(name) && !name.includes(' ');
+}
+
+export function captureFromShare({ title = '', text = '', url = '' } = {}) {
+  const link = firstLink(url) || firstLink(text) || firstLink(title);
+  const titled = typeof title === 'string' ? title.replace(/\s+/g, ' ').trim() : '';
+  const body = typeof text === 'string' ? text.replace(/\s+/g, ' ').trim() : '';
+  const caption = link ? body.replace(link, ' ').replace(/\s+/g, ' ').trim() : body;
+
+  let name = '';
+  if (titled && titled !== link && !isGenericTitle(titled)) name = titled;
+  else if (caption && !firstLink(caption) && !isGenericTitle(caption)) name = caption;
+  else if (link) {
+    const derived = nameFromUrl(link);
+    name = opaqueName(derived) || isGenericTitle(derived) ? hostOf(link) : derived;
+  } else if (titled) name = titled;
+  else if (caption) name = caption;
+
+  name = clampName(name || '');
+  if (!name && !link) return null;
+  return { name: name || 'Saved link', url: link };
+}
+
+export function captureFromPaste(draft, pasted) {
+  const incoming = typeof pasted === 'string' ? pasted.trim() : '';
+  if (!incoming) return null;
+  const parsed = parseCapture(incoming);
+  if (!parsed?.url) return null;
+
+  const typed = typeof draft === 'string' ? draft.trim() : '';
+  if (!typed) return parsed;
+  const typedParsed = parseCapture(typed);
+  if (!typedParsed?.url) return parseCapture(`${typed} ${incoming}`);
+  return parsed;
+}
+
+export function captureFromDrop(draft, dropped) {
+  const incoming = typeof dropped === 'string' ? dropped.trim() : '';
+  if (!incoming) return null;
+  const lines = incoming.split(/\r?\n/).map((line) => line.trim()).filter((line) => line && !line.startsWith('#'));
+  const text = lines[0] || incoming;
+  const parsed = parseCapture(text);
+  if (!parsed?.url) return null;
+  return captureFromPaste(draft, text);
+}
+
+export function nameFromFile(file) {
+  const raw = String(file?.name || '')
+    .replace(/\.[a-z0-9]+$/i, '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!raw || /^(image|img|photo|picture|pasted image|capture)$/i.test(raw)) return 'Photo';
+  return clampName(raw.charAt(0).toUpperCase() + raw.slice(1));
+}
+
+const ALLOWED_IMAGE = new Set(['image/jpeg', 'image/png', 'image/gif', 'image/webp']);
+
+export function prepareCaptureFile(file) {
+  if (!file) return { file: null, problem: '' };
+  const type = file.type === 'image/jpg' ? 'image/jpeg' : (file.type || '');
+  if (!ALLOWED_IMAGE.has(type)) return { file: null, problem: 'photo' };
+  if (file.size > 5 * 1024 * 1024) return { file: null, problem: 'size' };
+  const ext = type === 'image/jpeg' ? 'jpg' : type.split('/')[1];
+  const rawName = file.name && /\.[a-z0-9]+$/i.test(file.name) ? file.name : `photo.${ext}`;
+  const safeName = rawName.replace(/[^\w.\-]+/g, '_');
+  if (typeof File !== 'function') return { file, problem: '' };
+  if (safeName === file.name && type === file.type) return { file, problem: '' };
+  try {
+    return { file: new File([file], safeName, { type }), problem: '' };
+  } catch {
+    return { file, problem: '' };
+  }
+}
+
+export function shareRecordToCaptures(record) {
+  const shared = captureFromShare({
+    title: record?.title || '',
+    text: record?.text || '',
+    url: record?.url || ''
+  });
+  const incoming = Array.isArray(record?.files) ? record.files.filter(Boolean) : [];
+  if (!shared && incoming.length === 0) return [];
+
+  const prepared = incoming.map((file) => ({
+    source: file,
+    ...prepareCaptureFile(file)
+  }));
+  const usable = prepared.filter((entry) => entry.file);
+  const problem = prepared.find((entry) => entry.problem)?.problem || '';
+
+  if (usable.length === 0) {
+    if (!shared?.name && !shared?.url) return [];
+    return [{ name: shared.name, url: shared.url, file: null, problem }];
+  }
+
+  const name = shared?.name || nameFromFile(usable[0].source);
+  const url = shared?.url || '';
+  return [
+    { name, url, file: usable[0].file, problem: '' },
+    ...usable.slice(1, 4).map((entry) => ({
+      name: nameFromFile(entry.source),
+      url: '',
+      file: entry.file,
+      problem: ''
+    }))
+  ];
 }

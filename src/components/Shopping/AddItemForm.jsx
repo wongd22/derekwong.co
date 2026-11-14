@@ -1,10 +1,20 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef } from 'react';
 import { parseCapture } from '../../lib/shoppingCapture';
+import { matchSavedItems } from '../../lib/shoppingFind';
 
-const AddItemForm = ({ onAddItem, error, onClearError }) => {
-  const [newItem, setNewItem] = useState('');
+const AddItemForm = ({
+  value,
+  onChange,
+  onAddItem,
+  onRevealItem,
+  items,
+  error,
+  onClearError
+}) => {
   const inputRef = useRef(null);
   const saving = useRef(false);
+  const matches = useMemo(() => matchSavedItems(items, value), [items, value]);
+  const exact = matches.some((item) => item.name?.trim().toLowerCase() === value.trim().toLowerCase());
 
   useEffect(() => {
     inputRef.current?.focus();
@@ -14,15 +24,15 @@ const AddItemForm = ({ onAddItem, error, onClearError }) => {
     event.preventDefault();
     if (saving.current) return;
 
-    const parsed = parseCapture(newItem);
+    const parsed = parseCapture(value);
     if (!parsed) return;
 
-    const typed = newItem;
-    setNewItem('');
+    const typed = value;
+    onChange('');
     saving.current = true;
     const saved = await onAddItem(parsed);
     saving.current = false;
-    if (!saved) setNewItem(typed);
+    if (!saved) onChange(typed);
     inputRef.current?.focus();
   };
 
@@ -30,21 +40,21 @@ const AddItemForm = ({ onAddItem, error, onClearError }) => {
     <form onSubmit={handleSubmit}>
       <div className="shop-capture flex items-center gap-4">
         <label htmlFor="shopping-capture" className="sr-only">
-          Save something
+          Save something. Paste or drop a link or photo to save it here.
         </label>
         <input
           id="shopping-capture"
           ref={inputRef}
           type="text"
-          value={newItem}
+          value={value}
           autoFocus
           autoComplete="off"
           autoCapitalize="sentences"
           enterKeyHint="done"
           aria-invalid={error ? true : undefined}
-          aria-describedby={error ? 'shopping-capture-error' : undefined}
+          aria-describedby={error ? 'shopping-capture-error' : matches.length ? 'saved-matches-label' : undefined}
           onChange={(event) => {
-            setNewItem(event.target.value);
+            onChange(event.target.value);
             if (error) onClearError();
           }}
           placeholder="Save it before you forget."
@@ -52,7 +62,7 @@ const AddItemForm = ({ onAddItem, error, onClearError }) => {
         />
         <button
           type="submit"
-          disabled={!newItem.trim()}
+          disabled={!value.trim()}
           className="shrink-0 rounded-sm text-sm font-medium text-[#e4c9a3] disabled:text-neutral-700"
         >
           Save
@@ -62,6 +72,31 @@ const AddItemForm = ({ onAddItem, error, onClearError }) => {
         <p id="shopping-capture-error" role="alert" className="mt-2 text-sm text-red-400">
           {error}
         </p>
+      )}
+      {matches.length > 0 && (
+        <div className="mt-3">
+          <p id="saved-matches-label" className="text-xs text-neutral-500">Already saved</p>
+          <ul className="mt-1" aria-labelledby="saved-matches-label">
+            {matches.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => onRevealItem(item)}
+                  className="flex min-h-11 w-full items-center justify-between gap-3 rounded-sm py-2 text-left"
+                >
+                  <span className={`truncate text-sm ${item.isBought ? 'text-neutral-500 line-through' : 'text-neutral-200'}`}>
+                    {item.name}
+                  </span>
+                  {item.isBought && <span className="shrink-0 text-xs text-neutral-600">Bought</span>}
+                </button>
+              </li>
+            ))}
+          </ul>
+          {exact && (
+            <p className="text-xs text-neutral-600">Enter saves a new one.</p>
+          )}
+        </div>
       )}
     </form>
   );

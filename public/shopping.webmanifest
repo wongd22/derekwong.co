@@ -1,0 +1,41 @@
+{
+  "id": "/shopping",
+  "name": "Shopping list",
+  "short_name": "Shopping",
+  "description": "Save something before you forget.",
+  "start_url": "/shopping",
+  "scope": "/shopping",
+  "display": "standalone",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "icons": [
+    {
+      "src": "/shopping-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/shopping-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    }
+  ],
+  "share_target": {
+    "action": "/shopping/share",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "url": "url",
+      "files": [
+        {
+          "name": "media",
+          "accept": ["image/*", ".jpg", ".jpeg", ".png", ".gif", ".webp"]
+        }
+      ]
+    }
+  }
+}

@@ -37,6 +37,40 @@ export const useItemDetailsManager = (items) => {
     }
   }, [items, selectedItem]);
 
+  useEffect(() => {
+    if (!selectedItem?.id || selectedItem.pending) return;
+    const fresh = items.find((item) => item.id === selectedItem.id);
+    if (!fresh || fresh.pending) return;
+    const freshImage = fresh.imageUrl && !String(fresh.imageUrl).startsWith('blob:') ? fresh.imageUrl : '';
+    const selectedImage = selectedItem.imageUrl && !String(selectedItem.imageUrl).startsWith('blob:') ? selectedItem.imageUrl : '';
+
+    setItemDetails((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      if ((prev.name || '') === (selectedItem.name || '') && fresh.name && fresh.name !== prev.name) {
+        next.name = fresh.name;
+        changed = true;
+      }
+      if ((prev.imageUrl || '') === selectedImage && freshImage && freshImage !== (prev.imageUrl || '')) {
+        next.imageUrl = freshImage;
+        changed = true;
+      }
+      if ((prev.url || '') === (selectedItem.url || '') && (fresh.url || '') !== (prev.url || '')) {
+        next.url = fresh.url || '';
+        changed = true;
+      }
+      return changed ? next : prev;
+    });
+
+    if (
+      fresh.name !== selectedItem.name
+      || (fresh.imageUrl || '') !== (selectedItem.imageUrl || '')
+      || (fresh.url || '') !== (selectedItem.url || '')
+    ) {
+      setSelectedItem(fresh);
+    }
+  }, [items, selectedItem]);
+
   // Open item details panel with the selected item's data
   const handleItemClick = (item) => {
     setSelectedItem(item);
