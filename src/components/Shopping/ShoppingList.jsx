@@ -10,7 +10,9 @@ const ShoppingList = ({
   hiddenBecauseTags,
   onItemClick,
   onDeleteItem,
-  onToggleBought
+  onToggleBought,
+  localImages = {},
+  foundId = ''
 }) => {
   if (isLoading && !hasAnyItems) {
     return <p className="pt-12 text-sm text-neutral-500">Loading…</p>;
@@ -30,7 +32,7 @@ const ShoppingList = ({
         <div className="pt-14">
           <p className="text-base font-medium text-neutral-100">Nothing saved yet</p>
           <p className="mt-2 max-w-xs text-sm leading-6 text-neutral-500">
-            The lamp, the jacket, the thing from yesterday. A name is enough.
+            The lamp, the jacket, the thing from yesterday. A name is enough. Paste or drop a link or photo.
           </p>
         </div>
       );
@@ -49,6 +51,8 @@ const ShoppingList = ({
         <ShoppingRow
           key={item.id}
           item={item}
+          localImage={localImages[item.id]}
+          found={foundId === item.id}
           onItemClick={onItemClick}
           onDeleteItem={onDeleteItem}
           onToggleBought={onToggleBought}
@@ -58,12 +62,17 @@ const ShoppingList = ({
   );
 };
 
-const ShoppingRow = ({ item, onItemClick, onDeleteItem, onToggleBought }) => {
+const ShoppingRow = ({ item, localImage, found, onItemClick, onDeleteItem, onToggleBought }) => {
   const [revealed, setRevealed] = useState(false);
   const [imageBroken, setImageBroken] = useState(false);
   const rowRef = useRef(null);
   const touch = useRef(null);
-  const showImage = Boolean(item.imageUrl) && !imageBroken;
+  const imageSrc = item.imageUrl || localImage || '';
+  const showImage = Boolean(imageSrc) && !imageBroken;
+
+  useEffect(() => {
+    setImageBroken(false);
+  }, [imageSrc]);
 
   useEffect(() => {
     if (!revealed) return undefined;
@@ -103,12 +112,14 @@ const ShoppingRow = ({ item, onItemClick, onDeleteItem, onToggleBought }) => {
   return (
     <li
       ref={rowRef}
+      data-item-id={item.id}
       onTouchStart={onTouchStart}
       onTouchEnd={onTouchEnd}
       className={clsx(
         'item-row border-b border-white/[0.08] py-3.5',
         item.pending && 'shopping-enter opacity-80',
-        revealed && 'is-revealed'
+        revealed && 'is-revealed',
+        found && 'is-found'
       )}
     >
       <div className="flex items-start gap-1">
@@ -209,7 +220,7 @@ const ShoppingRow = ({ item, onItemClick, onDeleteItem, onToggleBought }) => {
               aria-label={`Photo of ${item.name}`}
             >
               <img
-                src={item.imageUrl}
+                src={imageSrc}
                 alt=""
                 onError={() => setImageBroken(true)}
                 className={clsx(

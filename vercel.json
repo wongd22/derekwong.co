@@ -1,9 +1,20 @@
 {
     "rewrites": [
       { "source": "/shopping", "destination": "/index.html" },
+      { "source": "/shopping/share", "destination": "/index.html" },
       { "source": "/place", "destination": "/index.html" },
       { "source": "/trading-rituals", "destination": "/index.html" },
       { "source": "/spending", "destination": "/index.html" }
+    ],
+    "headers": [
+      {
+        "source": "/share-sw.js",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "/shopping.webmanifest",
+        "headers": [{ "key": "Content-Type", "value": "application/manifest+json" }, { "key": "Cache-Control", "value": "no-cache" }]
+      }
     ]
   }
   

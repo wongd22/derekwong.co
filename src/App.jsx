@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
 import MyPage from './pages/MyPage';
 import Place from './pages/Place';
 import PreTradeRitual from './pages/trading-rituals';
@@ -17,6 +17,7 @@ function App() {
             <Shopping />
           </Suspense>
         } />
+        <Route path="/shopping/share" element={<Navigate to="/shopping" replace />} />
         <Route path="/place" element={<Place />} />
         <Route path="/trading-rituals" element={<PreTradeRitual />} />
         <Route path="/spending" element={<Spending />} />

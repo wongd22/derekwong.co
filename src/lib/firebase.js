@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, push, onValue, update, remove, set } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
+import { isStoredShoppingImage } from './shoppingImage';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -107,7 +108,7 @@ export const uploadImage = async (file, itemId) => {
 };
 
 export const deleteImage = async (imageUrl) => {
-  if (!imageUrl) return;
+  if (!isStoredShoppingImage(imageUrl)) return;
   try {
     const imageRef = storageRef(storage, imageUrl);
     await deleteObject(imageRef);

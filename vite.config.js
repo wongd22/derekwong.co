@@ -8,6 +8,20 @@ function spendingDevApi() {
     configureServer(server) {
       server.middlewares.use(async (req, res, next) => {
         const path = req.url?.split('?')[0] || '';
+        if (path.startsWith('/api/shopping')) {
+          try {
+            const mod = await server.ssrLoadModule('/server/shopping/preview.js');
+            await mod.handlePreview(req, res);
+          } catch (error) {
+            console.error(error);
+            if (!res.headersSent) {
+              res.statusCode = 200;
+              res.setHeader('Content-Type', 'application/json');
+              res.end(JSON.stringify({ title: '', image: '' }));
+            }
+          }
+          return;
+        }
         if (!path.startsWith('/api/spending')) return next();
         try {
           const mod = await server.ssrLoadModule('/server/spending/handler.js');

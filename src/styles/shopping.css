@@ -60,6 +60,11 @@
 .item-row {
   position: relative;
   touch-action: pan-y;
+  scroll-margin: 5rem;
+}
+
+.item-row.is-found {
+  box-shadow: inset 2px 0 0 #e4c9a3;
 }
 
 .item-actions {
