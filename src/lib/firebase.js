@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getDatabase, ref, push, onValue, update, remove } from 'firebase/database';
+import { getDatabase, ref, push, onValue, update, remove, set } from 'firebase/database';
 import { getStorage, ref as storageRef, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 
 const firebaseConfig = {
@@ -117,19 +117,33 @@ export const deleteImage = async (imageUrl) => {
   }
 };
 
+// Reserves a client id and writes later, so the list can show the item before the network returns.
+export const stageShoppingItem = (item) => {
+  const itemRef = push(ref(database, SHOPPING_LIST_REF));
+  const newItem = {
+    ...item,
+    createdAt: new Date().toISOString()
+  };
+
+  return {
+    id: itemRef.key,
+    item: newItem,
+    commit: async (finalItem = newItem) => {
+      try {
+        await set(itemRef, finalItem);
+        return itemRef.key;
+      } catch (error) {
+        console.error('Error adding item:', error);
+        throw error;
+      }
+    }
+  };
+};
+
 export const addShoppingItem = async (item) => {
-  try {
-    const shoppingListRef = ref(database, SHOPPING_LIST_REF);
-    const newItem = {
-      ...item,
-      createdAt: new Date().toISOString()
-    };
-    const result = await push(shoppingListRef, newItem);
-    return result;
-  } catch (error) {
-    console.error('Error adding item:', error);
-    throw error;
-  }
+  const staged = stageShoppingItem(item);
+  await staged.commit();
+  return { id: staged.id };
 };
 
 export const updateShoppingItem = async (itemId, updates) => {
@@ -171,7 +185,7 @@ export const deleteShoppingItem = async (itemId) => {
   }
 };
 
-export const subscribeToShoppingList = (callback) => {
+export const subscribeToShoppingList = (callback, onError) => {
   try {
     const shoppingListRef = ref(database, SHOPPING_LIST_REF);
     return onValue(shoppingListRef, (snapshot) => {
@@ -181,6 +195,9 @@ export const subscribeToShoppingList = (callback) => {
         ...value
       })).sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)) : [];
       callback(items);
+    }, (error) => {
+      console.error('Error subscribing to shopping list:', error);
+      if (onError) onError(error);
     });
   } catch (error) {
     console.error('Error subscribing to shopping list:', error);

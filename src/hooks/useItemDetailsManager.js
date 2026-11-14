@@ -17,14 +17,25 @@ export const useItemDetailsManager = (items) => {
   const [isEditingTag, setIsEditingTag] = useState(null);
   const [editTagValue, setEditTagValue] = useState('');
   const [isUploading, setIsUploading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   const [uploadError, setUploadError] = useState('');
+  const [saveError, setSaveError] = useState('');
   const [tagSuggestions, setTagSuggestions] = useState([]);
 
   // Extract all unique tags from items for suggestions
+  const tagKey = items.map((item) => (item.tags || []).join('\u0001')).join('\u0002');
   useEffect(() => {
     const allTags = Array.from(new Set(items.flatMap(item => item.tags || [])));
     setTagSuggestions(allTags);
-  }, [items]);
+  }, [tagKey, items]);
+
+  useEffect(() => {
+    if (!selectedItem?.pending) return;
+    const fresh = items.find((item) => item.id === selectedItem.id);
+    if (fresh && !fresh.pending) {
+      setSelectedItem(fresh);
+    }
+  }, [items, selectedItem]);
 
   // Open item details panel with the selected item's data
   const handleItemClick = (item) => {
@@ -38,6 +49,8 @@ export const useItemDetailsManager = (items) => {
       tags: item.tags || [],
       isBought: item.isBought || false
     });
+    setUploadError('');
+    setSaveError('');
     setIsDetailsPanelOpen(true);
   };
 
@@ -152,9 +165,7 @@ export const useItemDetailsManager = (items) => {
       const imageUrl = await uploadImage(file, item.id);
       setItemDetails(prev => ({ ...prev, imageUrl }));
       await updateShoppingItem(item.id, { imageUrl });
-      
-      setUploadError('Image uploaded successfully!');
-      setTimeout(() => setUploadError(''), 3000);
+      setUploadError('');
     } catch (error) {
       console.error('Error uploading image:', error);
       setUploadError('Failed to upload image. Please try again.');
@@ -165,10 +176,13 @@ export const useItemDetailsManager = (items) => {
 
   // Handle save changes
   const handleUpdateItem = async () => {
-    if (!selectedItem || !selectedItem.id) {
-      console.error('Cannot update item: No selected item or item ID');
+    if (!selectedItem || !selectedItem.id || selectedItem.pending) {
+      setSaveError(selectedItem?.pending ? 'Still saving. Try again in a moment.' : "Couldn't save changes.");
       return;
     }
+
+    setIsSaving(true);
+    setSaveError('');
 
     try {
       // Create a clean update object with only defined fields
@@ -195,6 +209,9 @@ export const useItemDetailsManager = (items) => {
       setIsDetailsPanelOpen(false);
     } catch (error) {
       console.error('Error updating item:', error);
+      setSaveError("Couldn't save changes.");
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -207,7 +224,9 @@ export const useItemDetailsManager = (items) => {
     editTagValue,
     tagSuggestions,
     isUploading,
+    isSaving,
     uploadError,
+    saveError,
     setIsDetailsPanelOpen,
     setItemDetails,
     setNewTagInput,

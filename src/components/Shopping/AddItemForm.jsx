@@ -1,35 +1,69 @@
-import React, { useState } from 'react';
-import { Plus } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { parseCapture } from '../../lib/shoppingCapture';
 
-const AddItemForm = ({ onAddItem }) => {
+const AddItemForm = ({ onAddItem, error, onClearError }) => {
   const [newItem, setNewItem] = useState('');
+  const inputRef = useRef(null);
+  const saving = useRef(false);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!newItem.trim()) return;
-    
-    onAddItem(newItem);
+  useEffect(() => {
+    inputRef.current?.focus();
+  }, []);
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (saving.current) return;
+
+    const parsed = parseCapture(newItem);
+    if (!parsed) return;
+
+    const typed = newItem;
     setNewItem('');
+    saving.current = true;
+    const saved = await onAddItem(parsed);
+    saving.current = false;
+    if (!saved) setNewItem(typed);
+    inputRef.current?.focus();
   };
 
   return (
-    <div className="backdrop-blur-lg bg-white/5 rounded-xl p-6 shadow-lg border border-white/10 transition-all duration-300">
-      <form onSubmit={handleSubmit} className="flex gap-3">
+    <form onSubmit={handleSubmit}>
+      <div className="shop-capture flex items-center gap-4">
+        <label htmlFor="shopping-capture" className="sr-only">
+          Save something
+        </label>
         <input
+          id="shopping-capture"
+          ref={inputRef}
           type="text"
           value={newItem}
-          onChange={(e) => setNewItem(e.target.value)}
-          placeholder="Add new item..."
-          className="flex-1 bg-gray-800/50 border border-white/10 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-2 focus:ring-blue-400 focus:border-transparent transition-all duration-300"
+          autoFocus
+          autoComplete="off"
+          autoCapitalize="sentences"
+          enterKeyHint="done"
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? 'shopping-capture-error' : undefined}
+          onChange={(event) => {
+            setNewItem(event.target.value);
+            if (error) onClearError();
+          }}
+          placeholder="Save it before you forget."
+          className="min-w-0 flex-1 bg-transparent py-3 text-base text-neutral-100 placeholder:text-neutral-600"
         />
         <button
           type="submit"
-          className="shrink-0 bg-gradient-to-r from-emerald-400 to-blue-500 text-white px-4 py-3 rounded-lg hover:opacity-90 transition-all duration-300 shadow-lg"
+          disabled={!newItem.trim()}
+          className="shrink-0 rounded-sm text-sm font-medium text-[#e4c9a3] disabled:text-neutral-700"
         >
-          <Plus className="w-5 h-5" />
+          Save
         </button>
-      </form>
-    </div>
+      </div>
+      {error && (
+        <p id="shopping-capture-error" role="alert" className="mt-2 text-sm text-red-400">
+          {error}
+        </p>
+      )}
+    </form>
   );
 };
 

@@ -1,0 +1,129 @@
+.shopping {
+  font-family: "Geist Sans", ui-sans-serif, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.shopping ::selection {
+  background: #e4c9a3;
+  color: #111111;
+}
+
+.shopping :focus-visible {
+  outline: 2px solid #e4c9a3;
+  outline-offset: 3px;
+}
+
+.shopping[role="dialog"]:focus-visible,
+.shopping input:focus-visible,
+.shopping textarea:focus-visible {
+  outline: none;
+}
+
+.shopping button:active:not(:disabled) {
+  opacity: 0.72;
+}
+
+.shop-capture {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.16);
+  transition: border-color 150ms ease;
+}
+
+.shop-capture:focus-within {
+  border-bottom-color: #e4c9a3;
+}
+
+.shop-field {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  transition: border-color 150ms ease;
+}
+
+.shop-field:focus {
+  border-bottom-color: #e4c9a3;
+}
+
+.shopping-enter {
+  animation: shopping-enter 180ms ease-out;
+}
+
+@keyframes shopping-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.item-row {
+  position: relative;
+  touch-action: pan-y;
+}
+
+.item-actions {
+  display: flex;
+  align-items: center;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.item-row:hover .item-actions,
+.item-row:focus-within .item-actions,
+.item-row.is-revealed .item-actions {
+  opacity: 1;
+}
+
+.item-more {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .item-actions {
+    display: none;
+    opacity: 1;
+    position: static;
+    background: transparent;
+  }
+
+  .item-row.is-revealed .item-actions {
+    display: flex;
+  }
+
+  .item-more {
+    display: inline-flex;
+  }
+}
+
+@media (min-width: 768px) {
+  .item-actions {
+    position: static;
+    display: flex;
+    width: 0;
+    overflow: hidden;
+    opacity: 1;
+    background: transparent;
+  }
+
+  .item-row:hover .item-actions,
+  .item-row:focus-within .item-actions,
+  .item-row.is-revealed .item-actions {
+    width: auto;
+    overflow: visible;
+  }
+
+  .item-more {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .shopping-enter,
+  .item-actions,
+  .shop-capture,
+  .shop-field {
+    animation: none;
+    transition: none;
+  }
+}

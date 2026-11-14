@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { FaGithub, FaLinkedin, FaTwitter } from 'react-icons/fa';
 import Place from './Place';
-import Shopping from './Shopping';
 import PreTradeRitual from './trading-rituals';
 import ProjectCard from '../components/ProjectCard';
+
+const Shopping = lazy(() => import('./Shopping'));
 
 const projects = [
   {
@@ -111,7 +112,11 @@ function MyPage() {
         <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/place" element={<Place />} />
-            <Route path="/shopping" element={<Shopping />} />
+            <Route path="/shopping" element={
+              <Suspense fallback={<div className="min-h-screen bg-black" />}>
+                <Shopping />
+              </Suspense>
+            } />
             <Route path="/trading-rituals" element={<PreTradeRitual />} />
         </Routes>
     </div>
