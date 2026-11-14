@@ -1,5 +1,5 @@
 import React from 'react';
-import { Hash, X, Plus } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const TagList = ({
   itemDetails,
@@ -17,73 +17,74 @@ const TagList = ({
   onUpdateTag,
   onKeyDown
 }) => {
+  const tags = itemDetails.tags || [];
+  const suggestions = tagSuggestions.filter((tag) => !tags.includes(tag));
+
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-300 mb-3">
-        Tags
-      </label>
-      <div className="space-y-3">
-        <div className="flex flex-wrap gap-2">
-          {itemDetails.tags && itemDetails.tags.map((tag) => (
-            <div
-              key={tag}
-              className="group flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-lg border border-white/10 transition-all duration-300 hover:border-white/20"
-            >
-              <Hash className="w-3 h-3 text-blue-300" />
-              {isEditingTag === tag ? (
-                <input
-                  type="text"
-                  value={editTagValue}
-                  onChange={(e) => setEditTagValue(e.target.value)}
-                  onKeyDown={(e) => onUpdateTag(tag, e)}
-                  onBlur={() => setIsEditingTag(null)}
-                  className="bg-transparent border-none p-0 text-sm text-white focus:ring-0 w-20"
-                  autoFocus
-                />
-              ) : (
-                <span
-                  onClick={() => onEditTag(tag)}
-                  className="text-sm text-gray-300 cursor-text"
-                >
-                  {tag}
-                </span>
-              )}
-              <button
-                onClick={() => onRemoveTag(tag)}
-                className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-400 transition-all duration-200"
-              >
-                <X className="w-3 h-3" />
-              </button>
-            </div>
-          ))}
-        </div>
-
-        {tagSuggestions.length > 0 && (
+      <p className="text-xs text-neutral-500">Tags</p>
+      <div className="mt-2 space-y-3">
+        {tags.length > 0 && (
           <div className="flex flex-wrap gap-2">
-            {tagSuggestions
-              .filter(tag => !itemDetails.tags.includes(tag))
-              .map(tag => (
+            {tags.map((tag) => (
+              <div key={tag} className="flex items-center gap-1 text-sm text-neutral-300">
+                {isEditingTag === tag ? (
+                  <input
+                    type="text"
+                    value={editTagValue}
+                    onChange={(event) => setEditTagValue(event.target.value)}
+                    onKeyDown={(event) => onUpdateTag(tag, event)}
+                    onBlur={() => setIsEditingTag(null)}
+                    aria-label={`Edit tag ${tag}`}
+                    className="shop-field w-24 bg-transparent py-1 text-sm text-neutral-100"
+                    autoFocus
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => onEditTag(tag)}
+                    className="rounded-sm py-1 text-left text-neutral-300"
+                  >
+                    {tag}
+                  </button>
+                )}
                 <button
-                  key={tag}
-                  onClick={() => onSelectExistingTag(tag)}
-                  className="flex items-center gap-1 px-3 py-1.5 bg-white/5 rounded-lg border border-white/10 transition-all duration-300 hover:bg-white/10 text-sm text-gray-400 hover:text-gray-200"
+                  type="button"
+                  onClick={() => onRemoveTag(tag)}
+                  aria-label={`Remove tag ${tag}`}
+                  className="grid size-7 place-items-center rounded-sm text-neutral-500 hover:text-neutral-200"
                 >
-                  <Plus className="w-3 h-3" />
-                  {tag}
+                  <X className="size-3" strokeWidth={1.5} aria-hidden="true" />
                 </button>
-              ))}
+              </div>
+            ))}
           </div>
         )}
 
-        <form onSubmit={onAddNewTag} className="flex items-center gap-2 px-3 py-2 bg-white/5 rounded-lg border border-white/10">
-          <Hash className="w-4 h-4 text-blue-300" />
+        {suggestions.length > 0 && (
+          <div className="flex flex-wrap gap-x-3 gap-y-2">
+            {suggestions.map((tag) => (
+              <button
+                key={tag}
+                type="button"
+                onClick={() => onSelectExistingTag(tag)}
+                className="rounded-sm text-sm text-neutral-500 hover:text-neutral-200"
+              >
+                + {tag}
+              </button>
+            ))}
+          </div>
+        )}
+
+        <form onSubmit={onAddNewTag}>
           <input
             type="text"
             value={newTagInput}
-            onChange={(e) => setNewTagInput(e.target.value)}
+            onChange={(event) => setNewTagInput(event.target.value)}
             onKeyDown={onKeyDown}
-            placeholder="Add a tag..."
-            className="flex-1 bg-transparent border-none text-sm text-white placeholder-gray-400 focus:ring-0 focus:outline-none p-0"
+            placeholder="Add a tag"
+            aria-label="Add a tag"
+            className="shop-field w-full bg-transparent py-2 text-sm text-neutral-100 placeholder:text-neutral-600"
           />
         </form>
       </div>
