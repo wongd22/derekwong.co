@@ -1,5 +1,6 @@
 import React, { Suspense, lazy } from 'react';
 import { BrowserRouter as Router, Navigate, Routes, Route } from 'react-router-dom';
+import PwaHead from './components/PwaHead';
 import MyPage from './pages/MyPage';
 import Place from './pages/Place';
 import PreTradeRitual from './pages/trading-rituals';
@@ -10,6 +11,7 @@ const Shopping = lazy(() => import('./pages/Shopping'));
 function App() {
   return (
     <Router>
+      <PwaHead />
       <Routes>
         <Route path="/" element={<MyPage />} />
         <Route path="/shopping" element={

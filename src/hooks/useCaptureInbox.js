@@ -62,26 +62,6 @@ export function useCaptureInbox({ getDraft, setDraft, onCapture, paused }) {
   }, [notice]);
 
   useEffect(() => {
-    const link = document.createElement('link');
-    link.rel = 'manifest';
-    link.href = '/shopping.webmanifest';
-    document.head.appendChild(link);
-
-    const icon = document.createElement('link');
-    icon.rel = 'apple-touch-icon';
-    icon.href = '/shopping-icon-192.png';
-    document.head.appendChild(icon);
-
-    const theme = document.querySelector('meta[name="theme-color"]');
-    const createdTheme = !theme;
-    const themeMeta = theme || document.createElement('meta');
-    const previousTheme = themeMeta.getAttribute('content');
-    if (createdTheme) {
-      themeMeta.setAttribute('name', 'theme-color');
-      document.head.appendChild(themeMeta);
-    }
-    themeMeta.setAttribute('content', '#000000');
-
     let cancelled = false;
     const onMessage = (event) => {
       if (event.data?.type === 'shopping-share') ingest();
@@ -120,6 +100,8 @@ export function useCaptureInbox({ getDraft, setDraft, onCapture, paused }) {
       }
     });
 
+    // Manifest and apple-touch-icon are set by PwaHead. This worker stays
+    // scoped to /shopping so the share target keeps working.
     if ('serviceWorker' in navigator) {
       navigator.serviceWorker.register('/share-sw.js', { scope: '/shopping' })
         .catch(() => navigator.serviceWorker.register('/share-sw.js'))
@@ -130,11 +112,6 @@ export function useCaptureInbox({ getDraft, setDraft, onCapture, paused }) {
 
     return () => {
       cancelled = true;
-      link.remove();
-      icon.remove();
-      if (createdTheme) themeMeta.remove();
-      else if (previousTheme == null) themeMeta.removeAttribute('content');
-      else themeMeta.setAttribute('content', previousTheme);
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.removeEventListener('message', onMessage);
       }
