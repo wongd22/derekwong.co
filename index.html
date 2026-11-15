@@ -4,6 +4,37 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="https://unsplash.com/photos/sunset-over-the-horizon-xP_AGmeEa6s" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#000000" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <meta name="apple-mobile-web-app-title" content="Derek" />
+    <link rel="apple-touch-icon" href="/icon-180.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <!-- Keep in sync with src/pwa/profiles.js. Runs before React so Add to Home Screen sees the right start_url. -->
+    <script>
+      (function () {
+        var path = location.pathname;
+        var manifest = '/manifest.webmanifest';
+        var icon = '/icon-180.png';
+        var title = 'Derek';
+        if (path === '/shopping' || path.indexOf('/shopping/') === 0) {
+          manifest = '/shopping.webmanifest';
+          icon = '/shopping-icon-192.png';
+          title = 'Shopping';
+        } else if (path === '/trading-rituals') {
+          manifest = '/rituals.webmanifest';
+          icon = '/rituals-icon-180.png';
+          title = 'Rituals';
+        }
+        var manifestLink = document.querySelector('link[rel="manifest"]');
+        if (manifestLink) manifestLink.href = manifest;
+        var apple = document.querySelector('link[rel="apple-touch-icon"]');
+        if (apple) apple.href = icon;
+        var appTitle = document.querySelector('meta[name="apple-mobile-web-app-title"]');
+        if (appTitle) appTitle.content = title;
+      })();
+    </script>
     <title>Derek Wong</title>
   </head>
   <body>
