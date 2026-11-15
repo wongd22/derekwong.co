@@ -7,37 +7,19 @@ import bad1 from "../components/assets/bad-1.jpg";
 import bad2 from "../components/assets/bad-2.jpg";
 import bad3 from "../components/assets/bad-3.jpg";
 import bad4 from "../components/assets/bad-4.jpg";
-import {
-  ACTIVE_STEP,
-  CHECKLIST,
-  SESSION_WINDOW,
-  STEPS,
-  TF_ORDER,
-  applyRecord,
-  checklistPasses,
-  emptyLedger,
-  emptyMarks,
-  evaluateGate,
-  lossRecorded,
-  lotSize,
-  newDay,
-  newWeek,
-  normalizeLedger,
-  oneRAmount,
-  signedR,
-} from "../lib/ritualGate";
 
-const LS_KEY = "ptr-state-v1";
+const SESSION_WINDOW =
+  "2–5pm and 7–9pm HKT on weekdays (2–5 is London, 7–9 is New York)";
 
-const WINS = [
+const HELD = [
   {
     img: good1,
     pair: "XAUUSD",
     date: "27 Feb 2026",
     tag: "6 / 7 checklist",
-    head: "Right size, calm mind, exit at plan",
+    head: "Correct size and a calm mind",
     quote:
-      "Feel calm and not worry if lose — means bet size is correct. Right direction and execute to take profit when hit milestone.",
+      "Feel calm and not worry if lose — means bet size is correct. Right direction, and close at the plan when the milestone is hit.",
     points: [
       "W/D bias marked before anything else",
       "4H entry aligned with bias, 15m fine-tuned",
@@ -49,7 +31,7 @@ const WINS = [
     pair: "XAUUSD",
     date: "4 Mar 2026",
     tag: "Entry TF respected",
-    head: "1m used only to fine-tune, never to decide",
+    head: "15m decides, 1m only fine-tunes",
     quote:
       "Decision timeframe 15m, TP at the targeted price of that timeframe. Did not over-leverage.",
     points: [
@@ -63,8 +45,8 @@ const WINS = [
     pair: "GBPUSD",
     date: "3 Mar 2026",
     tag: "Clean execution",
-    head: "Entry right, TP right — nothing improvised",
-    quote: "Entry right and TP right.",
+    head: "Wait for the 禁區 and close at the plan, no revenge re-entry",
+    quote: "Closed at the plan — nothing improvised.",
     points: [
       "Zone was marked in the morning, not in the moment",
       "Waited for price to come to the 禁區",
@@ -73,13 +55,13 @@ const WINS = [
   },
 ];
 
-const LOSSES = [
+const BREAKS = [
   {
     img: bad1,
     pair: "EURUSD",
     date: "26 Feb 2026",
     tag: "FOMO into a weak trend",
-    head: "Ticked the boxes, ignored the broken zone",
+    head: "Ticking the list to justify FOMO",
     quote:
       "FOMO to believe it is upward trend, but maybe it destroyed the upward 禁區 — so it is not strong upwards yet.",
     points: [
@@ -93,7 +75,7 @@ const LOSSES = [
     pair: "—",
     date: "20 Feb 2026",
     tag: "Over traded",
-    head: "Rushed into 1m to win it back",
+    head: "Rushing to 1m to win it back",
     quote:
       "Over traded today, rush into 1m timeframe, lose discipline, urgent to win... Gamble into it. Remember what consistent means and it will compound.",
     points: [
@@ -108,7 +90,7 @@ const LOSSES = [
     pair: "GBPUSD",
     date: "11 Nov 2025",
     tag: "Entry on the line",
-    head: "Bought the level, got swept",
+    head: "Buying mid-channel",
     quote: "No review written — that silence is part of the lesson.",
     points: [
       "Entry sat right on the black S/R line, mid-channel",
@@ -122,7 +104,7 @@ const LOSSES = [
     pair: "EURUSD",
     date: "7 Oct 2025",
     tag: "Counter-trend on 5m",
-    head: "Caught a falling market on the small timeframe",
+    head: "Deciding on 5m against the move",
     quote: "No review written — that silence is part of the lesson.",
     points: [
       "Long taken while 5m kept printing lower highs",
@@ -132,90 +114,17 @@ const LOSSES = [
   },
 ];
 
-function readState() {
-  if (typeof window === "undefined") return null;
-  try {
-    return JSON.parse(window.localStorage.getItem(LS_KEY) || "null");
-  } catch (e) {
-    return null;
-  }
-}
-
-function useRitualGate() {
-  const step = STEPS[ACTIVE_STEP];
-  const [ledger, setLedger] = useState(emptyLedger);
-  const [hydrated, setHydrated] = useState(false);
-  const [plan, setPlan] = useState({ bias: "", invalidation: "", target: "" });
-  const [marks, setMarks] = useState(emptyMarks);
-  const [stopTf, setStopTf] = useState("");
-  const [targetTf, setTargetTf] = useState("");
-  const [stopPips, setStopPips] = useState("");
-  const [atr, setAtr] = useState("");
-  const [pipValue, setPipValue] = useState("");
-
-  useEffect(() => {
-    const saved = readState();
-    if (saved) setLedger(normalizeLedger(saved));
-    setHydrated(true);
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated) return;
-    try {
-      window.localStorage.setItem(LS_KEY, JSON.stringify(ledger));
-    } catch (e) {
-      /* storage blocked — the gate still works for this session */
-    }
-  }, [ledger, hydrated]);
-
-  const setPlanField = (key, value) => setPlan((current) => ({ ...current, [key]: value }));
-  const setMark = (id, value) => setMarks((current) => ({ ...current, [id]: value }));
-  const passes = checklistPasses(marks);
-  const risk = oneRAmount(step);
-  const verdict = evaluateGate({
-    step,
-    ledger,
-    stopTf,
-    targetTf,
-    passes,
-    stopPips,
-    atr,
-    plan,
-  });
-
-  return {
-    step,
-    risk,
-    lots: lotSize(risk, stopPips, pipValue),
-    ledger,
-    plan,
-    setPlanField,
-    marks,
-    setMark,
-    passes,
-    stopTf,
-    setStopTf,
-    targetTf,
-    setTargetTf,
-    stopPips,
-    setStopPips,
-    atr,
-    setAtr,
-    pipValue,
-    setPipValue,
-    record: (r) => setLedger((current) => applyRecord(current, r)),
-    resetDay: () => setLedger((current) => newDay(current)),
-    resetWeek: () => setLedger((current) => newWeek(current)),
-    ...verdict,
-  };
-}
-
-function Example({ trade, kind, className = "" }) {
-  const ok = kind === "win";
+function Example({ trade, tone, className = "", "aria-hidden": ariaHidden }) {
+  const held = tone === "held";
   return (
-    <section className={`ptr-slide ptr-example ${ok ? "is-good" : "is-bad"} ${className}`}>
+    <section
+      aria-hidden={ariaHidden}
+      className={`ptr-slide ptr-example ${held ? "is-held" : "is-break"} ${className}`.trim()}
+    >
       <div className="ptr-ex-left">
-        <div className="ptr-ex-kicker">{ok ? "GOOD TRADE" : "BAD TRADE"}</div>
+        <div className="ptr-ex-kicker">
+          {held ? "What good execution looks like" : "What this is not"}
+        </div>
         <h2>{trade.head}</h2>
         <div className="ptr-meta">
           <span>{trade.pair}</span>
@@ -236,274 +145,7 @@ function Example({ trade, kind, className = "" }) {
   );
 }
 
-function Tick({ pressed, pass = false, onClick, children }) {
-  return (
-    <button
-      type="button"
-      aria-pressed={pressed}
-      className={pressed && pass ? "is-pass" : undefined}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  );
-}
-
-function CheckItem({ item, value, onChange }) {
-  const choose = (next) => onChange(item.id, value === next ? null : next);
-  if (item.zone) {
-    return (
-      <div className="ptr-item">
-        <h3>{item.label}</h3>
-        <p className="ptr-note">{item.hint}</p>
-        <p className="ptr-ask" id={`${item.id}-ask`}>
-          mapped 禁區, or mid-zone?
-        </p>
-        <div className="ptr-ticks is-zone" role="group" aria-labelledby={`${item.id}-ask`}>
-          <Tick pressed={value === "mapped"} pass onClick={() => choose("mapped")}>
-            Mapped 禁區
-          </Tick>
-          <Tick pressed={value === "mid"} onClick={() => choose("mid")}>
-            Mid-zone
-          </Tick>
-          <Tick pressed={value === "fail"} onClick={() => choose("fail")}>
-            Fail
-          </Tick>
-        </div>
-        {value === "mid" ? <p className="ptr-midnote">Mid-zone does not pass 禁區.</p> : null}
-      </div>
-    );
-  }
-
-  return (
-    <div className="ptr-item">
-      <h3>{item.label}</h3>
-      <p className="ptr-note">{item.hint}</p>
-      <div className="ptr-ticks" role="group" aria-label={item.label}>
-        <Tick pressed={value === "pass"} pass onClick={() => choose("pass")}>
-          Pass
-        </Tick>
-        <Tick pressed={value === "fail"} onClick={() => choose("fail")}>
-          Fail
-        </Tick>
-      </div>
-    </div>
-  );
-}
-
-function Outcome({ cleared }) {
-  return (
-    <div className={`ptr-outcome ${cleared ? "is-execute" : "is-aside"}`} role="status">
-      <p className="ptr-outcome-title">{cleared ? "Execute" : "Stand aside"}</p>
-      <p className="ptr-outcome-line">
-        {cleared
-          ? "Gate clear — execute at 1R, then stop touching it."
-          : "Gate closed — DO NOT TRADE."}
-      </p>
-    </div>
-  );
-}
-
-function PermissionBody({ gate }) {
-  const lost = lossRecorded(gate.ledger);
-  return (
-    <>
-      <section className="ptr-block">
-        <p className="ptr-kicker">1 · Plan</p>
-        <h2>Bias, invalidation, one target.</h2>
-        <label className="ptr-field" htmlFor="plan-bias">
-          <span>Bias</span>
-          <input
-            id="plan-bias"
-            value={gate.plan.bias}
-            autoComplete="off"
-            enterKeyHint="next"
-            onChange={(event) => gate.setPlanField("bias", event.target.value)}
-          />
-        </label>
-        <label className="ptr-field" htmlFor="plan-invalidation">
-          <span>Invalidation</span>
-          <input
-            id="plan-invalidation"
-            value={gate.plan.invalidation}
-            autoComplete="off"
-            enterKeyHint="next"
-            onChange={(event) => gate.setPlanField("invalidation", event.target.value)}
-          />
-        </label>
-        <label className="ptr-field" htmlFor="plan-target">
-          <span>One target</span>
-          <input
-            id="plan-target"
-            value={gate.plan.target}
-            autoComplete="off"
-            enterKeyHint="done"
-            onChange={(event) => gate.setPlanField("target", event.target.value)}
-          />
-        </label>
-      </section>
-
-      <section className="ptr-block">
-        <div className="ptr-block-head">
-          <div>
-            <p className="ptr-kicker">2 · Checklist</p>
-            <h2>Five of seven, or no trade.</h2>
-          </div>
-          <p className="ptr-sum" aria-live="polite">
-            <b>{gate.passes}</b>
-            <span>of 7</span>
-          </p>
-        </div>
-        <div className="ptr-items">
-          {CHECKLIST.map((item) => (
-            <CheckItem
-              key={item.id}
-              item={item}
-              value={gate.marks[item.id]}
-              onChange={gate.setMark}
-            />
-          ))}
-        </div>
-      </section>
-
-      <section className="ptr-block">
-        <p className="ptr-kicker">Last gate · 沒有答案，只有合理的行為</p>
-        <h2>No entry until the gate is green.</h2>
-        <div className="ptr-gate-grid">
-          <div className="ptr-panel">
-            <h3>1 · Timeframe lock</h3>
-            <label className="ptr-field">
-              <span>Stop timeframe</span>
-              <select value={gate.stopTf} onChange={(event) => gate.setStopTf(event.target.value)}>
-                <option value="">—</option>
-                {TF_ORDER.map((tf) => (
-                  <option key={tf} value={tf}>{tf}</option>
-                ))}
-              </select>
-            </label>
-            <label className="ptr-field">
-              <span>Target timeframe</span>
-              <select value={gate.targetTf} onChange={(event) => gate.setTargetTf(event.target.value)}>
-                <option value="">—</option>
-                {TF_ORDER.map((tf) => (
-                  <option key={tf} value={tf}>{tf}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          <div className="ptr-panel">
-            <h3>2 · Size in R</h3>
-            <div className="ptr-rbox">
-              <div>
-                <span>1R</span>
-                <b>{(gate.step.rPct * 100).toFixed(2)}%</b>
-              </div>
-              <div>
-                <span>{gate.step.label}</span>
-                <b className="ptr-usd">${gate.risk}</b>
-              </div>
-            </div>
-            <label className="ptr-field">
-              <span>Stop distance (pips)</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={gate.stopPips}
-                onChange={(event) => gate.setStopPips(event.target.value)}
-              />
-            </label>
-            <label className="ptr-field">
-              <span>ATR(15m) in pips</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={gate.atr}
-                onChange={(event) => gate.setAtr(event.target.value)}
-              />
-            </label>
-            <label className="ptr-field">
-              <span>Pip value per lot ($)</span>
-              <input
-                type="number"
-                inputMode="decimal"
-                value={gate.pipValue}
-                onChange={(event) => gate.setPipValue(event.target.value)}
-              />
-            </label>
-            <div className="ptr-lots">
-              Size: <b>{gate.lots}</b> lots
-            </div>
-          </div>
-
-          <div className="ptr-panel">
-            <h3>3 · Bullets</h3>
-            <div className="ptr-bullets" aria-hidden="true">
-              {Array.from({ length: gate.step.buffer }).map((_, n) => (
-                <span key={n} className={n < gate.bulletsLeft ? "is-live" : "is-spent"} />
-              ))}
-            </div>
-            <p className="ptr-bullet-note">
-              {gate.bulletsLeft} of {gate.step.buffer}R left. Target is +{gate.step.target}R to advance.
-            </p>
-            <div className="ptr-tally">
-              <span>
-                Today {signedR(gate.ledger.dayR)}
-                {lost ? " · loss logged" : ""}
-              </span>
-              <span>Week {signedR(gate.ledger.weekR)}</span>
-            </div>
-            <div className="ptr-actions">
-              <button type="button" onClick={() => gate.record(-1)}>−1R</button>
-              <button type="button" onClick={() => gate.record(1)}>+1R</button>
-              <button type="button" onClick={() => gate.record(2)}>+2R</button>
-              <button type="button" className="ptr-ghost" onClick={gate.resetDay}>
-                New day
-              </button>
-              <button type="button" className="ptr-ghost" onClick={gate.resetWeek}>
-                New week
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <ul className="ptr-gatelist">
-          {gate.gates.map((item) => (
-            <li key={item.key} className={item.ok ? "is-ok" : "is-open"}>
-              <b>
-                <span aria-hidden="true">{item.ok ? "✓" : "–"}</span> {item.label}
-              </b>
-              <span>{item.detail}</span>
-            </li>
-          ))}
-        </ul>
-        <Outcome cleared={gate.cleared} />
-      </section>
-    </>
-  );
-}
-
-function Session({ gate, onReview }) {
-  return (
-    <div className="ptr-session">
-      <div className="ptr-session-inner">
-        <header className="ptr-session-head">
-          <div>
-            <p className="ptr-kicker">Permission now</p>
-            <h1>Before you click.</h1>
-            <p className="ptr-lead">Written plan, then the seven ticks, then the gate.</p>
-          </div>
-          <button type="button" className="ptr-quiet" onClick={onReview}>
-            Review the ritual
-          </button>
-        </header>
-        <PermissionBody gate={gate} />
-      </div>
-    </div>
-  );
-}
-
-function Deck({ gate, onSession }) {
+function Deck() {
   const [i, setI] = useState(0);
   const [drag, setDrag] = useState(0);
   const [dragging, setDragging] = useState(false);
@@ -527,6 +169,7 @@ function Deck({ gate, onSession }) {
       <ul className="ptr-facts">
         <li>1R = 0.5% — never think in USD</li>
         <li>One loss, then review</li>
+        <li>Weekly stop (−4R)</li>
         <li>10R buffer · 12R to pass</li>
         <li>Need 5 of 7 to fire</li>
       </ul>
@@ -593,7 +236,7 @@ function Deck({ gate, onSession }) {
           <ul className="ptr-check">
             <li>順勢 <span>— aligned with higher TF</span></li>
             <li>原生段破慣性 <span>— impulse break</span></li>
-            <li>禁區 <span>— price at a key zone</span></li>
+            <li>禁區 <span>— price at a key zone. Mid-zone does not pass 禁區.</span></li>
             <li>黃金比率 <span>— Fib 61.8 confluence</span></li>
             <li>止蝕盤觸發 <span>— liquidity sweep</span></li>
             <li>時間配合 <span>— {SESSION_WINDOW}</span></li>
@@ -608,17 +251,22 @@ function Deck({ gate, onSession }) {
             <li><b>TP &amp; SL</b>Both set at entry. Never manage from memory.</li>
             <li><b>At 1:1</b>Move SL to breakeven. 食半留半.</li>
             <li><b>After a loss</b>Stop. One loss per day, then review.</li>
+            <li><b>Weekly stop</b>−4R.</li>
             <li><b>Never</b>Add exposure to save a losing idea.</li>
           </ul>
         </div>
       </div>
     </section>,
 
-    ...WINS.map((trade) => <Example trade={trade} kind="win" />),
-    ...LOSSES.map((trade) => <Example trade={trade} kind="loss" />),
+    ...HELD.map((trade) => <Example trade={trade} tone="held" />),
+    ...BREAKS.map((trade) => <Example trade={trade} tone="break" />),
 
-    <section className="ptr-slide ptr-gate">
-      <PermissionBody gate={gate} />
+    <section className="ptr-slide ptr-close">
+      <p className="ptr-kicker">Stand aside</p>
+      <h1>沒有答案，只有合理的行為</h1>
+      <p className="ptr-rule">
+        Sitting out is executing the plan — if you cannot name bias, invalidation, and the 禁區 out loud, there is no trade.
+      </p>
     </section>,
   ];
 
@@ -728,9 +376,6 @@ function Deck({ gate, onSession }) {
       </main>
       {i === 0 && <div className="ptr-hint">Swipe →</div>}
       <div className="ptr-bar">
-        <button type="button" className="ptr-quiet" onClick={onSession}>
-          Permission now
-        </button>
         <div className="ptr-dots">
           {slides.map((_, n) => (
             <button
@@ -764,17 +409,10 @@ function Deck({ gate, onSession }) {
 }
 
 export default function PreTradeRitual() {
-  const gate = useRitualGate();
-  const [mode, setMode] = useState("session");
-
   return (
     <div className="ptr">
       <style>{css}</style>
-      {mode === "session" ? (
-        <Session gate={gate} onReview={() => setMode("teach")} />
-      ) : (
-        <Deck gate={gate} onSession={() => setMode("session")} />
-      )}
+      <Deck />
     </div>
   );
 }
@@ -798,41 +436,6 @@ const css = `
 .ptr h3 { font-size:1.0625rem; line-height:1.25; letter-spacing:-.014em; font-weight:600; }
 .ptr-kicker { color:var(--ptr-dim); font-size:.75rem; font-weight:600; letter-spacing:.06em; line-height:1.35; text-transform:uppercase; }
 
-.ptr-session { height:100%; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:calc(1.25rem + env(safe-area-inset-top)) 1.25rem calc(2rem + env(safe-area-inset-bottom)); }
-.ptr-session-inner { width:min(100%,40rem); margin:0 auto; display:flex; flex-direction:column; gap:2.75rem; }
-.ptr-session-head { display:flex; flex-direction:column; align-items:flex-start; gap:.35rem; }
-.ptr-session h1 { font-size:clamp(2rem,9vw,2.75rem); }
-.ptr-lead { margin-top:.55rem; max-width:28rem; color:var(--ptr-dim); font-size:1.0625rem; line-height:1.4; letter-spacing:-.011em; }
-.ptr button.ptr-quiet { appearance:none; background:none; border:none; color:var(--ptr-blue); font:inherit; font-size:1rem; font-weight:600; letter-spacing:-.011em; line-height:1.2; padding:.65rem 0; min-height:44px; text-align:left; cursor:pointer; }
-.ptr button.ptr-quiet:active { opacity:.55; }
-.ptr button.ptr-quiet:focus-visible, .ptr-ticks button:focus-visible, .ptr-field input:focus-visible, .ptr-field select:focus-visible { outline:2px solid var(--ptr-blue); outline-offset:3px; }
-
-.ptr-block { display:flex; flex-direction:column; gap:.9rem; }
-.ptr-block-head { display:flex; align-items:flex-end; justify-content:space-between; gap:1rem; }
-.ptr-sum { display:flex; align-items:baseline; gap:.4rem; font-variant-numeric:tabular-nums; }
-.ptr-sum b { font-size:2rem; line-height:.9; letter-spacing:-.03em; font-weight:700; }
-.ptr-sum span { color:var(--ptr-dim); font-size:.95rem; font-weight:500; letter-spacing:0; }
-.ptr-field { display:flex; flex-direction:column; gap:.3rem; }
-.ptr-field > span { font-size:.75rem; font-weight:600; letter-spacing:.04em; line-height:1.3; text-transform:uppercase; color:var(--ptr-dim); }
-.ptr-field input, .ptr-field select { width:100%; background:transparent; border:none; border-bottom:1px solid rgba(255,255,255,.22); border-radius:0; color:var(--ptr-txt); padding:.7rem .1rem; min-height:48px; font:inherit; font-size:1.0625rem; line-height:1.3; letter-spacing:-.011em; }
-.ptr-item { display:flex; flex-direction:column; gap:.45rem; padding:1rem 0 1.1rem; border-top:1px solid var(--ptr-line); }
-.ptr-item h3 { font-size:1.1875rem; letter-spacing:-.016em; line-height:1.2; }
-.ptr-note, .ptr-ask, .ptr-midnote { font-size:.9375rem; line-height:1.4; letter-spacing:0; }
-.ptr-note, .ptr-midnote { color:var(--ptr-dim); }
-.ptr-ticks { display:grid; grid-template-columns:1fr 1fr; gap:.5rem; margin-top:.15rem; }
-.ptr-ticks.is-zone { grid-template-columns:1fr 1fr; }
-.ptr-ticks.is-zone button:first-child { grid-column:1 / -1; }
-.ptr-ticks button { min-height:48px; padding:.75rem .6rem; border:none; border-radius:12px; background:rgba(255,255,255,.06); color:var(--ptr-dim); font:inherit; font-size:1rem; font-weight:600; letter-spacing:-.011em; cursor:pointer; }
-.ptr-ticks button:active { background:rgba(255,255,255,.12); }
-.ptr-ticks button[aria-pressed="true"] { color:var(--ptr-txt); background:rgba(255,255,255,.14); }
-.ptr-ticks button.is-pass { color:var(--ptr-green); background:rgba(114,188,143,.16); }
-
-.ptr-outcome { margin-top:.4rem; padding-top:1.75rem; border-top:1px solid var(--ptr-line); display:flex; flex-direction:column; gap:.45rem; }
-.ptr-outcome-title { font-size:clamp(2.75rem,12vw,4.25rem); line-height:.96; letter-spacing:-.035em; font-weight:700; font-optical-sizing:auto; }
-.ptr-outcome.is-execute .ptr-outcome-title { color:var(--ptr-green); }
-.ptr-outcome.is-aside .ptr-outcome-title { color:var(--ptr-txt); }
-.ptr-outcome-line { max-width:22rem; font-size:1.0625rem; line-height:1.4; letter-spacing:-.011em; font-weight:500; color:var(--ptr-txt); }
-
 .ptr-deck { height:100%; width:100%; position:relative; overflow:hidden; touch-action:pan-y; }
 .ptr-track { display:flex; height:100%; width:100%; will-change:transform; transition:transform .55s cubic-bezier(.22,.9,.28,1); }
 .ptr-track.is-dragging { transition:none; }
@@ -850,8 +453,8 @@ const css = `
 .ptr-hint { position:absolute; left:50%; bottom:calc(var(--ptr-bar-h) + 8px); z-index:2; font-size:.75rem; font-weight:600; letter-spacing:.08em; text-transform:uppercase; color:var(--ptr-dim); pointer-events:none; animation:ptrHint 2.4s ease-in-out infinite; }
 @keyframes ptrHint { 0%,100% { opacity:.3; transform:translate(-50%,0) } 50% { opacity:.9; transform:translate(calc(-50% + 7px),0) } }
 
-.ptr-cover { justify-content:center; }
-.ptr-cover .ptr-rule { margin-top:1.4rem; padding-left:1rem; border-left:3px solid var(--ptr-blue); color:var(--ptr-dim); font-size:1.125rem; line-height:1.45; letter-spacing:0; max-width:40rem; }
+.ptr-cover, .ptr-close { justify-content:center; }
+.ptr-cover .ptr-rule, .ptr-close .ptr-rule { margin-top:1.4rem; padding-left:1rem; border-left:3px solid var(--ptr-blue); color:var(--ptr-dim); font-size:1.125rem; line-height:1.45; letter-spacing:0; max-width:40rem; }
 .ptr-facts { list-style:none; margin-top:1.75rem; display:flex; flex-direction:column; gap:.45rem; }
 .ptr-facts li { font-size:.95rem; line-height:1.35; letter-spacing:-.011em; color:var(--ptr-dim); }
 
@@ -870,8 +473,8 @@ const css = `
 .ptr-panel { background:none; border:none; padding:0; display:flex; flex-direction:column; gap:.75rem; }
 .ptr-panel h3 { font-size:.75rem; letter-spacing:.06em; text-transform:uppercase; color:var(--ptr-dim); font-weight:600; }
 .ptr-check { list-style:none; display:flex; flex-direction:column; gap:.7rem; }
-.ptr-check li { font-size:1rem; line-height:1.4; letter-spacing:-.011em; padding-left:1.6rem; position:relative; }
-.ptr-check li::before { content:""; position:absolute; left:0; top:.2rem; width:15px; height:15px; border:1.5px solid rgba(255,255,255,.28); border-radius:4px; }
+.ptr-check li { font-size:1rem; line-height:1.4; letter-spacing:-.011em; padding-left:1rem; position:relative; }
+.ptr-check li::before { content:""; position:absolute; left:0; top:.55rem; width:5px; height:5px; border-radius:50%; background:rgba(255,255,255,.28); }
 .ptr-check li span { color:var(--ptr-dim); }
 .ptr-stack { list-style:none; display:flex; flex-direction:column; gap:.85rem; }
 .ptr-stack li { font-size:.975rem; line-height:1.4; letter-spacing:-.011em; padding-left:.8rem; border-left:2px solid var(--ptr-line); }
@@ -882,53 +485,26 @@ const css = `
 .ptr-ex-right, .ptr-ex-right.is-wide { width:100%; display:flex; }
 .ptr-ex-right { order:-1; }
 .ptr-ex-right img { width:100%; max-height:36svh; object-fit:contain; border-radius:10px; }
-.ptr-ex-kicker { font-size:.75rem; letter-spacing:.08em; font-weight:700; margin-bottom:.7rem; }
-.is-good .ptr-ex-kicker { color:var(--ptr-green); }
-.is-bad .ptr-ex-kicker { color:var(--ptr-red); }
+.ptr-ex-kicker { font-size:.75rem; letter-spacing:.08em; font-weight:700; margin-bottom:.7rem; text-transform:uppercase; }
+.is-held .ptr-ex-kicker { color:var(--ptr-green); }
+.is-break .ptr-ex-kicker { color:var(--ptr-red); }
 .ptr-meta { display:flex; gap:.55rem; align-items:center; margin-top:.9rem; flex-wrap:wrap; }
 .ptr-meta span { font-size:.8125rem; color:var(--ptr-dim); letter-spacing:0; }
 .ptr-meta .ptr-tag { border-radius:999px; padding:.2rem .7rem; }
-.is-good .ptr-meta .ptr-tag { color:var(--ptr-green); }
-.is-bad .ptr-meta .ptr-tag { color:var(--ptr-red); }
+.is-held .ptr-meta .ptr-tag { color:var(--ptr-green); }
+.is-break .ptr-meta .ptr-tag { color:var(--ptr-red); }
 .ptr blockquote { margin-top:1rem; padding:.85rem 0 .85rem .9rem; border-left:3px solid var(--ptr-line); font-size:1rem; line-height:1.5; letter-spacing:-.011em; color:#e8e8e6; }
-.is-good blockquote { border-left-color:var(--ptr-green); }
-.is-bad blockquote { border-left-color:var(--ptr-red); }
+.is-held blockquote { border-left-color:var(--ptr-green); }
+.is-break blockquote { border-left-color:var(--ptr-red); }
 .ptr-ex-left ul { list-style:none; margin-top:1rem; display:flex; flex-direction:column; gap:.5rem; }
 .ptr-ex-left ul li { font-size:.9375rem; line-height:1.4; color:var(--ptr-dim); padding-left:1rem; position:relative; }
 .ptr-ex-left ul li::before { content:""; position:absolute; left:0; top:.5rem; width:6px; height:6px; border-radius:50%; }
-.is-good .ptr-ex-left ul li::before { background:var(--ptr-green); }
-.is-bad .ptr-ex-left ul li::before { background:var(--ptr-red); }
-
-.ptr-gate-grid { display:grid; grid-template-columns:1fr; gap:1.75rem; margin-top:.35rem; }
-.ptr-rbox { display:grid; grid-template-columns:1fr 1fr; gap:.75rem; }
-.ptr-rbox > div { display:flex; flex-direction:column; gap:.15rem; padding-bottom:.35rem; border-bottom:1px solid var(--ptr-line); }
-.ptr-rbox span { font-size:.6875rem; letter-spacing:.04em; text-transform:uppercase; color:var(--ptr-dim); font-weight:600; }
-.ptr-rbox b { font-size:1.5rem; line-height:1.1; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-.ptr-rbox .ptr-usd { color:var(--ptr-dim); font-size:1rem; font-weight:500; letter-spacing:0; }
-.ptr-lots { font-size:.95rem; color:var(--ptr-dim); }
-.ptr-lots b { color:var(--ptr-txt); font-size:1.25rem; letter-spacing:-.02em; font-variant-numeric:tabular-nums; }
-.ptr-bullets { display:flex; gap:.35rem; flex-wrap:wrap; }
-.ptr-bullets span { width:14px; height:14px; border-radius:50%; }
-.ptr-bullets .is-live { background:var(--ptr-green); }
-.ptr-bullets .is-spent { background:none; border:1px solid var(--ptr-line); }
-.ptr-bullet-note { font-size:.875rem; line-height:1.4; color:var(--ptr-dim); }
-.ptr-tally { display:flex; gap:.9rem; flex-wrap:wrap; font-size:.875rem; line-height:1.35; font-variant-numeric:tabular-nums; }
-.ptr-actions { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:.45rem; }
-.ptr-actions button { width:100%; text-align:center; background:rgba(255,255,255,.08); border:none; border-radius:10px; color:var(--ptr-txt); padding:.55rem .4rem; min-height:44px; font:inherit; font-size:.95rem; font-weight:600; letter-spacing:-.011em; cursor:pointer; }
-.ptr-actions button:active { background:rgba(255,255,255,.16); }
-.ptr-actions .ptr-ghost { background:transparent; color:var(--ptr-dim); font-weight:500; }
-.ptr-actions .ptr-ghost:active { background:rgba(255,255,255,.06); }
-.ptr-gatelist { list-style:none; display:flex; flex-direction:column; margin-top:.5rem; }
-.ptr-gatelist li { border-top:1px solid var(--ptr-line); padding:.75rem 0; display:flex; flex-direction:column; gap:.15rem; }
-.ptr-gatelist li b { font-size:.95rem; font-weight:600; letter-spacing:-.011em; }
-.ptr-gatelist li span { font-size:.8125rem; line-height:1.35; color:var(--ptr-dim); }
-.ptr-gatelist .is-ok b { color:var(--ptr-green); }
-.ptr-gatelist .is-open b { color:var(--ptr-dim); font-weight:500; }
+.is-held .ptr-ex-left ul li::before { background:var(--ptr-green); }
+.is-break .ptr-ex-left ul li::before { background:var(--ptr-red); }
 
 .ptr-bar { position:absolute; left:0; right:0; bottom:0; z-index:4; min-height:var(--ptr-bar-h); display:flex; align-items:center; gap:.5rem; padding:0 .85rem env(safe-area-inset-bottom); font-size:.75rem; color:var(--ptr-dim); background:linear-gradient(to top,rgba(25,25,25,.96) 60%,rgba(25,25,25,0)); }
-.ptr-bar .ptr-quiet { white-space:nowrap; padding:0; }
 .ptr-bar-end { display:flex; align-items:center; gap:.5rem; margin-left:auto; }
-.ptr-dots { display:none; align-items:center; flex-wrap:wrap; }
+.ptr-dots { display:none; align-items:center; flex-wrap:wrap; margin-left:auto; }
 .ptr-dot { display:grid; place-items:center; width:22px; height:36px; background:none; border:none; padding:0; cursor:pointer; }
 .ptr-dot span { width:6px; height:6px; border-radius:50%; background:rgba(255,255,255,.24); }
 .ptr-dot.is-on span { background:var(--ptr-blue); transform:scale(1.6); }
@@ -940,11 +516,9 @@ const css = `
 .ptr-nav button:focus-visible, .ptr-dot:focus-visible { outline:2px solid var(--ptr-blue); outline-offset:2px; }
 
 @media (min-width:700px) {
-  .ptr-session { padding-left:2.5rem; padding-right:2.5rem; }
-  .ptr-session-head { flex-direction:row; justify-content:space-between; align-items:flex-end; gap:1.5rem; }
   .ptr-slide { padding:calc(3.5rem + env(safe-area-inset-top)) 4rem calc(var(--ptr-bar-h) + 1rem); justify-content:center; }
-  .ptr-slide.ptr-gate, .ptr-slide.ptr-example { justify-content:flex-start; }
-  .ptr-cover { justify-content:center; }
+  .ptr-slide.ptr-example { justify-content:flex-start; }
+  .ptr-cover, .ptr-close { justify-content:center; }
   .ptr-funnel { display:grid; grid-template-columns:repeat(4,1fr); gap:1.5rem; }
   .ptr-step { border-top:none; padding-top:0; }
   .ptr-step + .ptr-step { border-left:1px solid var(--ptr-line); padding-left:1.25rem; }
@@ -955,11 +529,6 @@ const css = `
   .ptr-ex-right.is-wide { flex:0 0 44%; }
   .ptr-ex-right img { width:auto; max-width:100%; max-height:76dvh; }
   .ptr-dots { display:flex; }
-}
-@media (min-width:900px) {
-  .ptr-gate-grid { grid-template-columns:repeat(3,1fr); gap:2rem; }
-  .ptr-gatelist { display:grid; grid-template-columns:repeat(3,1fr); gap:0 1.5rem; }
-  .ptr-gatelist li { height:100%; }
 }
 @media (prefers-reduced-motion:no-preference) {
   .ptr-slide.is-active > * { animation:ptrUp .5s cubic-bezier(.22,.9,.28,1) both; }
